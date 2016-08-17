@@ -6,7 +6,9 @@ import textwrap
 from ampy.pyboard import PyboardError
 
 
-BUFFER_SIZE = 32
+BUFFER_SIZE = 32  # Amount of data to read or write to the serial port at a time.
+                  # This is kept small because small chips and USB to serial
+                  # bridges usually have very small buffers.
 
 
 class Files(object):
@@ -116,3 +118,11 @@ class Files(object):
             else:
                 raise ex
         self._pyboard.exit_raw_repl()
+
+    def run(self, filename):
+        """Run the provided script and return its output.
+        """
+        self._pyboard.enter_raw_repl()
+        out = self._pyboard.execfile(filename)
+        self._pyboard.exit_raw_repl()
+        return out

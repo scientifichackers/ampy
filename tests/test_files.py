@@ -1,5 +1,6 @@
 # Adafruit MicroPython Tool - File Operation Tests
 # Author: Tony DiCola
+import tempfile
 import unittest
 # Try importing python 3 mock library, then fall back to python 2 (external module).
 try:
@@ -73,3 +74,13 @@ class TestFiles(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'Directory is not empty: foo'):
             board_files = files.Files(pyboard)
             result = board_files.rm('foo')
+
+    def test_run_with_output(self):
+        pyboard = mock.Mock()
+        pyboard.execfile = mock.Mock(return_value=b"Hello world")
+        board_files = files.Files(pyboard)
+        with tempfile.NamedTemporaryFile() as program:
+            program.write(b'print("Hello world")')
+            program.flush()
+            output = board_files.run(program.name)
+        self.assertEqual(output, b"Hello world")
