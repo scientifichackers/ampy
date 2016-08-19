@@ -1,6 +1,26 @@
 # Adafruit MicroPython Tool - File Operation Tests
 # Author: Tony DiCola
+# Copyright (c) 2016 Adafruit Industries
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 import tempfile
+import sys
 import unittest
 # Try importing python 3 mock library, then fall back to python 2 (external module).
 try:
@@ -13,6 +33,14 @@ from ampy.pyboard import PyboardError
 
 
 class TestFiles(unittest.TestCase):
+
+    def raisesRegex(self, *args, **kwargs):
+        # Wrapper to work with the different names for assertRaisesRegex vs.
+        # assertRaisesRegexp in Python 3 vs. 2 (ugh).
+        if sys.version_info >= (3,2):
+            return self.assertRaisesRegex(*args, **kwargs)
+        else:
+            return self.assertRaisesRegexp(*args, **kwargs)
 
     def test_ls_multiple_files(self):
         pyboard = mock.Mock()
@@ -31,7 +59,7 @@ class TestFiles(unittest.TestCase):
     def test_ls_bad_directory(self):
         pyboard = mock.Mock()
         pyboard.exec_ = mock.Mock(side_effect=PyboardError('exception', b'', b'Traceback (most recent call last):\r\n  File "<stdin>", line 3, in <module>\r\nOSError: [Errno 2] ENOENT\r\n'))
-        with self.assertRaisesRegex(RuntimeError, 'No such directory: /foo'):
+        with self.raisesRegex(RuntimeError, 'No such directory: /foo'):
             board_files = files.Files(pyboard)
             result = board_files.ls('/foo')
 
@@ -45,7 +73,7 @@ class TestFiles(unittest.TestCase):
     def test_get_bad_file(self):
         pyboard = mock.Mock()
         pyboard.exec_ = mock.Mock(side_effect=PyboardError('exception', b'', b'Traceback (most recent call last):\r\n  File "<stdin>", line 3, in <module>\r\nOSError: [Errno 2] ENOENT\r\n'))
-        with self.assertRaisesRegex(RuntimeError, 'No such file: foo.txt'):
+        with self.raisesRegex(RuntimeError, 'No such file: foo.txt'):
             board_files = files.Files(pyboard)
             result = board_files.get('foo.txt')
 
@@ -64,14 +92,14 @@ class TestFiles(unittest.TestCase):
     def test_rm_file_doesnt_exist(self):
         pyboard = mock.Mock()
         pyboard.exec_ = mock.Mock(side_effect=PyboardError('exception', b'', b'Traceback (most recent call last):\r\n  File "<stdin>", line 3, in <module>\r\nOSError: [Errno 2] ENOENT\r\n'))
-        with self.assertRaisesRegex(RuntimeError, 'No such file/directory: foo.txt'):
+        with self.raisesRegex(RuntimeError, 'No such file/directory: foo.txt'):
             board_files = files.Files(pyboard)
             result = board_files.rm('foo.txt')
 
     def test_rm_directory_not_empty(self):
         pyboard = mock.Mock()
         pyboard.exec_ = mock.Mock(side_effect=PyboardError('exception', b'', b'Traceback (most recent call last):\r\n  File "<stdin>", line 3, in <module>\r\nOSError: [Errno 13] EACCES\r\n'))
-        with self.assertRaisesRegex(RuntimeError, 'Directory is not empty: foo'):
+        with self.raisesRegex(RuntimeError, 'Directory is not empty: foo'):
             board_files = files.Files(pyboard)
             result = board_files.rm('foo')
 

@@ -190,6 +190,12 @@ class Pyboard:
             raise PyboardError('could not enter raw repl')
         # By splitting this into 2 reads, it allows boot.py to print stuff,
         # which will show up after the soft reboot and before the raw REPL.
+        # Modification from original pyboard.py below:
+        #   Add a small delay and send Ctrl-C twice after soft reboot to ensure
+        #   any main program loop in main.py is interrupted.
+        time.sleep(0.1)
+        self.serial.write(b'\x03\x03')
+        # End modification above.
         data = self.read_until(1, b'raw REPL; CTRL-B to exit\r\n')
         if not data.endswith(b'raw REPL; CTRL-B to exit\r\n'):
             print(data)
