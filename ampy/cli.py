@@ -38,6 +38,7 @@ _board = None
 @click.option('--baud', '-b', envvar='AMPY_BAUD', default=115200, type=click.INT,
               help='Baud rate for the serial connection. (default 115200)',
               metavar='BAUD')
+@click.version_option()
 def cli(port, baud):
     """ampy - Adafruit MicroPython Tool
 
@@ -47,27 +48,6 @@ def cli(port, baud):
     """
     global _board
     _board = pyboard.Pyboard(port, baudrate=baud)
-
-@cli.command()
-@click.argument('directory', default='/')
-def ls(directory):
-    """List contents of a directory on the board.
-
-    Can pass an optional argument which is the path to the directory.  The
-    default is to list the contents of the root, /, path.
-
-    For example to list the contents of the root run:
-
-      ampy --port /board/serial/port ls
-
-    Or to list the contents of the /foo/bar directory on the board run:
-
-      ampy --port /board/serial/port ls /foo/bar
-    """
-    # List each file/directory on a separate line.
-    board_files = files.Files(_board)
-    for f in board_files.ls(directory):
-        print(f)
 
 @cli.command()
 @click.argument('remote_file')
@@ -99,6 +79,48 @@ def get(remote_file, local_file):
         print(contents.decode('utf-8'))
     else:
         local_file.write(contents)
+
+@cli.command()
+@click.argument('directory')
+def mkdir(directory):
+    """
+    Create a directory on the board.
+
+    Mkdir will create the specified directory on the board.  One argument is
+    required, the full path of the directory to create.
+
+    Note that you cannot recursively create a hierarchy of directories with one
+    mkdir command, instead you must create each parent directory with separate
+    mkdir command calls.
+
+    For example to make a directory under the root called 'code':
+
+      ampy --port /board/serial/port mkdir /code
+    """
+    # Run the mkdir command.
+    board_files = files.Files(_board)
+    board_files.mkdir(directory)
+
+@cli.command()
+@click.argument('directory', default='/')
+def ls(directory):
+    """List contents of a directory on the board.
+
+    Can pass an optional argument which is the path to the directory.  The
+    default is to list the contents of the root, /, path.
+
+    For example to list the contents of the root run:
+
+      ampy --port /board/serial/port ls
+
+    Or to list the contents of the /foo/bar directory on the board run:
+
+      ampy --port /board/serial/port ls /foo/bar
+    """
+    # List each file/directory on a separate line.
+    board_files = files.Files(_board)
+    for f in board_files.ls(directory):
+        print(f)
 
 @cli.command()
 @click.argument('local_file', type=click.File('rb'))
@@ -136,7 +158,8 @@ def rm(remote_file):
 
     Remove the specified file from the board's filesystem.  Must specify one
     argument which is the path to the file to delete.  Note that this can't
-    delete directories which have files inside them.
+    delete directories which have files inside them, but can delete empty
+    directories.
 
     For example to delete main.py from the root of a board run:
 
@@ -148,23 +171,32 @@ def rm(remote_file):
 
 @cli.command()
 @click.argument('local_file')
-def run(local_file):
+@click.option('--no-output', '-n', is_flag=True,
+              help="Run the code without waiting for it to finish and print output.  Use this when running code with main loops that never return.")
+def run(local_file, no_output):
     """Run a script and print its output.
 
     Run will send the specified file to the board and execute it immediately.
     Any output from the board will be printed to the console (note that this is
-    not a 'shell' and you can't send input to the program).  Be careful not to
-    send a script that runs an infinite loop as the run command assumes the script
-    will exit after a short period of time.
+    not a 'shell' and you can't send input to the program).
 
-    For example to run a test.py script run:
+    Note that if your code has a main or infinite loop you should add the --no-output
+    option.  This will run the script and immediately exit without waiting for
+    the script to finish and print output.
+
+    For example to run a test.py script and print any output after it finishes:
 
       ampy --port /board/serial/port run test.py
+
+    Or to run test.py and not wait for it to finish:
+
+      ampy --port /board/serial/port run --no-output test.py
     """
     # Run the provided file and print its output.
     board_files = files.Files(_board)
-    output = board_files.run(local_file)
-    print(output.decode('utf-8'), end='')
+    output = board_files.run(local_file, not no_output)
+    if output is not None:
+        print(output.decode('utf-8'), end='')
 
 if __name__ == '__main__':
     cli()

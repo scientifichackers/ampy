@@ -44,30 +44,6 @@ class Files(object):
         """
         self._pyboard = pyboard
 
-    def ls(self, directory='/'):
-        """List the contents of the specified directory (or root if none is
-        specified).  Returns a list of strings with the names of files in the
-        specified directory.
-        """
-        # Execute os.listdir() command on the board.
-        command = """
-            import os
-            print(os.listdir('{0}'))
-        """.format(directory)
-        self._pyboard.enter_raw_repl()
-        try:
-            out = self._pyboard.exec_(textwrap.dedent(command))
-        except PyboardError as ex:
-            # Check if this is an OSError #2, i.e. directory doesn't exist and
-            # rethrow it as something more descriptive.
-            if ex.args[2].decode('utf-8').find('OSError: [Errno 2] ENOENT') != -1:
-                raise RuntimeError('No such directory: {0}'.format(directory))
-            else:
-                raise ex
-        self._pyboard.exit_raw_repl()
-        # Parse the result list and return it.
-        return ast.literal_eval(out.decode('utf-8'))
-
     def get(self, filename):
         """Retrieve the contents of the specified file and return its contents
         as a byte string.
@@ -97,6 +73,50 @@ class Files(object):
                 raise ex
         self._pyboard.exit_raw_repl()
         return out
+
+    def ls(self, directory='/'):
+        """List the contents of the specified directory (or root if none is
+        specified).  Returns a list of strings with the names of files in the
+        specified directory.
+        """
+        # Execute os.listdir() command on the board.
+        command = """
+            import os
+            print(os.listdir('{0}'))
+        """.format(directory)
+        self._pyboard.enter_raw_repl()
+        try:
+            out = self._pyboard.exec_(textwrap.dedent(command))
+        except PyboardError as ex:
+            # Check if this is an OSError #2, i.e. directory doesn't exist and
+            # rethrow it as something more descriptive.
+            if ex.args[2].decode('utf-8').find('OSError: [Errno 2] ENOENT') != -1:
+                raise RuntimeError('No such directory: {0}'.format(directory))
+            else:
+                raise ex
+        self._pyboard.exit_raw_repl()
+        # Parse the result list and return it.
+        return ast.literal_eval(out.decode('utf-8'))
+
+    def mkdir(self, directory):
+        """Create the specified directory.  Note this cannot create a recursive
+        hierarchy of directories, instead each one should be created separately.
+        """
+        # Execute os.mkdir command on the board.
+        command = """
+            import os
+            os.mkdir('{0}')
+        """.format(directory)
+        self._pyboard.enter_raw_repl()
+        try:
+            out = self._pyboard.exec_(textwrap.dedent(command))
+        except PyboardError as ex:
+            # Check if this is an OSError #17, i.e. directory already exists.
+            if ex.args[2].decode('utf-8').find('OSError: [Errno 17] EEXIST') != -1:
+                raise RuntimeError('Directory already exists: {0}'.format(directory))
+            else:
+                raise ex
+        self._pyboard.exit_raw_repl()
 
     def put(self, filename, data):
         """Create or update the specified file with the provided data.
@@ -138,10 +158,20 @@ class Files(object):
                 raise ex
         self._pyboard.exit_raw_repl()
 
-    def run(self, filename):
-        """Run the provided script and return its output.
+    def run(self, filename, wait_output=True):
+        """Run the provided script and return its output.  If wait_output is True
+        (default) then wait for the script to finish and then print its output,
+        otherwise just run the script and don't wait for any output.
         """
         self._pyboard.enter_raw_repl()
-        out = self._pyboard.execfile(filename)
+        out = None
+        if wait_output:
+            # Run the file and wait for output to return.
+            out = self._pyboard.execfile(filename)
+        else:
+            # Read the file and run it using lower level pyboard functions that
+            # won't wait for it to finish or return output.
+            with open(filename, 'rb') as infile:
+                self._pyboard.exec_raw_no_follow(infile.read())
         self._pyboard.exit_raw_repl()
         return out
