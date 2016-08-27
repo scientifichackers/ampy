@@ -198,5 +198,19 @@ def run(local_file, no_output):
     if output is not None:
         print(output.decode('utf-8'), end='')
 
+@cli.command()
+def reset():
+    """Perform soft reset/reboot of the board.
+
+    Will connect to the board and perform a soft reset.  No arguments are
+    necessary:
+
+      ampy --port /board/serial/port reset
+    """
+    # Enter then exit the raw REPL, in the process the board will be soft reset
+    # (part of enter raw REPL).
+    _board.enter_raw_repl()
+    _board.exit_raw_repl()
+
 if __name__ == '__main__':
     cli()
