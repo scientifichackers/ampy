@@ -212,5 +212,10 @@ def reset():
     _board.enter_raw_repl()
     _board.exit_raw_repl()
 
+
+def run():
+    cli(auto_envvar_prefix='AMPY')
+
+
 if __name__ == '__main__':
-    cli()
+    run()

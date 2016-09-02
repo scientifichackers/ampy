@@ -47,7 +47,7 @@ setup(
     install_requires=['click', 'pyserial'],
     entry_points={
         'console_scripts': [
-            'ampy=ampy.cli:cli',
+            'ampy=ampy.cli:run',
         ],
     },
 )
