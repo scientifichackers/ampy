@@ -33,10 +33,10 @@ _board = None
 
 @click.group()
 @click.option('--port', '-p', envvar='AMPY_PORT', required=True, type=click.STRING,
-              help='Name of serial port for connected board.',
+              help='Name of serial port for connected board.  Can optionally specify with AMPY_PORT environemnt variable.',
               metavar='PORT')
 @click.option('--baud', '-b', envvar='AMPY_BAUD', default=115200, type=click.INT,
-              help='Baud rate for the serial connection. (default 115200)',
+              help='Baud rate for the serial connection (default 115200).  Can optionally specify with AMPY_BAUD environment variable.',
               metavar='BAUD')
 @click.version_option()
 def cli(port, baud):
