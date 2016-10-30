@@ -170,6 +170,24 @@ def rm(remote_file):
     board_files.rm(remote_file)
 
 @cli.command()
+@click.argument('remote_dir')
+def rmdir(remote_dir):
+    """Remove a directory from the board.
+
+    Remove the specified directory from the board's filesystem.  Must specify one
+    argument which is the path to the directory to delete.  Note that this can't
+    delete directories which have files inside them, but can delete empty
+    directories.
+
+    For example to delete /foo from the root of a board run:
+
+      ampy --port /board/serial/port rmdir /foo
+    """
+    # Delete the provided directory on the board.
+    board_files = files.Files(_board)
+    board_files.rmdir(remote_dir)
+
+@cli.command()
 @click.argument('local_file')
 @click.option('--no-output', '-n', is_flag=True,
               help="Run the code without waiting for it to finish and print output.  Use this when running code with main loops that never return.")
