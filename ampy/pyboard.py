@@ -193,7 +193,7 @@ class Pyboard:
         # Modification from original pyboard.py below:
         #   Add a small delay and send Ctrl-C twice after soft reboot to ensure
         #   any main program loop in main.py is interrupted.
-        time.sleep(0.1)
+        time.sleep(0.5)
         self.serial.write(b'\x03\x03')
         # End modification above.
         data = self.read_until(1, b'raw REPL; CTRL-B to exit\r\n')
