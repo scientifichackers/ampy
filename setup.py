@@ -26,7 +26,7 @@ setup(
     name='adafruit-ampy',
     version=ampy.__version__,
     description='Adafruit MicroPython tool is a command line tool to interact with a MicroPython board over a serial connection.',
-    url='https://github.com/adafruit/Adafruit_MicroPython_Tool',
+    url='https://github.com/adafruit/ampy',
     author='Tony DiCola',
     author_email='tdicola@adafruit.com',
     license='MIT',
