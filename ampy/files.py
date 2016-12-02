@@ -137,7 +137,7 @@ class Files(object):
         self._pyboard.exit_raw_repl()
 
     def rm(self, filename):
-        """Remove the specified file or directory."""
+        """Remove the specified file."""
         command = """
             import os
             os.remove('{0}')
@@ -147,13 +147,35 @@ class Files(object):
             out = self._pyboard.exec_(textwrap.dedent(command))
         except PyboardError as ex:
             message = ex.args[2].decode('utf-8')
-            # Check if this is an OSError #2, i.e. file/directory doesn't exist
+            # Check if this is an OSError #2, i.e. file doesn't exist
             # and rethrow it as something more descriptive.
             if message.find('OSError: [Errno 2] ENOENT') != -1:
                 raise RuntimeError('No such file/directory: {0}'.format(filename))
+            # Check for OSError #21, is a directory
+            if message.find('OSError: [Errno 21] EISDIR') != -1:
+                raise RuntimeError('Is a directory use: rmdir {0}'.format(filename))
+            else:
+                raise ex
+        self._pyboard.exit_raw_repl()
+
+    def rmdir(self, dirname):
+        """Remove the specified file or directory."""
+        command = """
+            import os
+            os.rmdir('{0}')
+        """.format(dirname)
+        self._pyboard.enter_raw_repl()
+        try:
+            out = self._pyboard.exec_(textwrap.dedent(command))
+        except PyboardError as ex:
+            message = ex.args[2].decode('utf-8')
+            # Check if this is an OSError #2, i.e. directory doesn't exist
+            # and rethrow it as something more descriptive.
+            if message.find('OSError: [Errno 2] ENOENT') != -1:
+                raise RuntimeError('No such directory: {0}'.format(dirname))
             # Check for OSError #13, the directory isn't empty.
             if message.find('OSError: [Errno 13] EACCES') != -1:
-                raise RuntimeError('Directory is not empty: {0}'.format(filename))
+                raise RuntimeError('Directory is not empty: {0}'.format(dirname))
             else:
                 raise ex
         self._pyboard.exit_raw_repl()
