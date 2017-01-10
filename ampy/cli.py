@@ -287,4 +287,15 @@ def reset():
     _board.exit_raw_repl()
 
 if __name__ == '__main__':
-    cli()
+    try:
+        cli()
+    finally:
+        # Try to ensure the board serial connection is always gracefully closed.
+        if _board is not None:
+            try:
+                _board.close()
+            except:
+                # Swallow errors when attempting to close as it's just a best effort
+                # and shouldn't cause a new error or problem if the connection can't
+                # be closed.
+                pass
