@@ -30,6 +30,10 @@ BUFFER_SIZE = 32  # Amount of data to read or write to the serial port at a time
                   # bridges usually have very small buffers.
 
 
+class DirectoryExistsError(Exception):
+    pass
+
+
 class Files(object):
     """Class to interact with a MicroPython board files over a serial connection.
     Provides functions for listing, uploading, and downloading files from the
@@ -81,8 +85,8 @@ class Files(object):
         """
         # Execute os.listdir() command on the board.
         command = """
-            import os
-            print(os.listdir('{0}'))
+            import uos
+            print(uos.listdir('{0}'))
         """.format(directory)
         self._pyboard.enter_raw_repl()
         try:
@@ -104,8 +108,8 @@ class Files(object):
         """
         # Execute os.mkdir command on the board.
         command = """
-            import os
-            os.mkdir('{0}')
+            import uos
+            uos.mkdir('{0}')
         """.format(directory)
         self._pyboard.enter_raw_repl()
         try:
@@ -113,7 +117,7 @@ class Files(object):
         except PyboardError as ex:
             # Check if this is an OSError #17, i.e. directory already exists.
             if ex.args[2].decode('utf-8').find('OSError: [Errno 17] EEXIST') != -1:
-                raise RuntimeError('Directory already exists: {0}'.format(directory))
+                raise DirectoryExistsError('Directory already exists: {0}'.format(directory))
             else:
                 raise ex
         self._pyboard.exit_raw_repl()
@@ -139,8 +143,8 @@ class Files(object):
     def rm(self, filename):
         """Remove the specified file or directory."""
         command = """
-            import os
-            os.remove('{0}')
+            import uos
+            uos.remove('{0}')
         """.format(filename)
         self._pyboard.enter_raw_repl()
         try:
@@ -154,6 +158,45 @@ class Files(object):
             # Check for OSError #13, the directory isn't empty.
             if message.find('OSError: [Errno 13] EACCES') != -1:
                 raise RuntimeError('Directory is not empty: {0}'.format(filename))
+            else:
+                raise ex
+        self._pyboard.exit_raw_repl()
+
+    def rmdir(self, directory):
+        """Forcefully remove the specified directory and all its children."""
+        # Build a script to walk an entire directory structure and delete every
+        # file and subfolder.  This is tricky because MicroPython has no os.walk
+        # or similar function to walk folders, so this code does it manually
+        # with recursion and changing directories.  For each directory it lists
+        # the files and deletes everything it can, i.e. all the files.  Then
+        # it lists the files again and assumes they are directories (since they
+        # couldn't be deleted in the first pass) and recursively clears those
+        # subdirectories.  Finally when finished clearing all the children the
+        # parent directory is deleted.
+        command = """
+            import uos
+            def rmdir(directory):
+                uos.chdir(directory)
+                for f in uos.listdir():
+                    try:
+                        uos.remove(f)
+                    except OSError:
+                        pass
+                for f in uos.listdir():
+                    rmdir(f)
+                uos.chdir('..')
+                uos.rmdir(directory)
+            rmdir('{0}')
+        """.format(directory)
+        self._pyboard.enter_raw_repl()
+        try:
+            out = self._pyboard.exec_(textwrap.dedent(command))
+        except PyboardError as ex:
+            message = ex.args[2].decode('utf-8')
+            # Check if this is an OSError #2, i.e. directory doesn't exist
+            # and rethrow it as something more descriptive.
+            if message.find('OSError: [Errno 2] ENOENT') != -1:
+                raise RuntimeError('No such directory: {0}'.format(directory))
             else:
                 raise ex
         self._pyboard.exit_raw_repl()

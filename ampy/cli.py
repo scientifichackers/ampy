@@ -21,6 +21,9 @@
 # SOFTWARE.
 from __future__ import print_function
 import os
+import platform
+import posixpath
+import re
 
 import click
 
@@ -29,6 +32,19 @@ import ampy.pyboard as pyboard
 
 
 _board = None
+
+
+def windows_full_port_name(portname):
+    # Helper function to generate proper Windows COM port paths.  Apparently
+    # Windows requires COM ports above 9 to have a special path, where ports below
+    # 9 are just referred to by COM1, COM2, etc. (wacky!)  See this post for
+    # more info and where this code came from:
+    # http://eli.thegreenplace.net/2009/07/31/listing-all-serial-ports-on-windows-with-python/
+    m = re.match('^COM(\d+)$', portname)
+    if m and int(m.group(1)) < 10:
+        return portname
+    else:
+        return '\\\\.\\{0}'.format(portname)
 
 
 @click.group()
@@ -47,6 +63,10 @@ def cli(port, baud):
     scripts.
     """
     global _board
+    # On Windows fix the COM port path name for ports above 9 (see comment in
+    # windows_full_port_name function).
+    if platform.system() == 'Windows':
+        port = windows_full_port_name(port)
     _board = pyboard.Pyboard(port, baudrate=baud)
 
 @cli.command()
@@ -123,15 +143,17 @@ def ls(directory):
         print(f)
 
 @cli.command()
-@click.argument('local_file', type=click.File('rb'))
-@click.argument('remote_file', required=False)
-def put(local_file, remote_file):
-    """Put a file on the board.
+@click.argument('local', type=click.Path(exists=True))
+@click.argument('remote', required=False)
+def put(local, remote):
+    """Put a file or folder and its contents on the board.
 
-    Put will upload a local file to the board.  If the file already exists on
-    the board it will be overwritten with no warning!  You must pass at least
-    one argument which is the path to the local file to upload.  You can pass
-    a second optional argument which is the path and name of the file to put to
+    Put will upload a local file or folder  to the board.  If the file already
+    exists on the board it will be overwritten with no warning!  You must pass
+    at least one argument which is the path to the local file/folder to
+    upload.  If the item to upload is a folder then it will be copied to the
+    board recursively with its entire child structure.  You can pass a second
+    optional argument which is the path and name of the file/folder to put to
     on the connected board.
 
     For example to upload a main.py from the current directory to the board's
@@ -143,13 +165,47 @@ def put(local_file, remote_file):
     in the board's root run:
 
       ampy --port /board/serial/port put ./foo/board_boot.py boot.py
+
+    To upload a local folder adafruit_library and all of its child files/folders
+    as an item under the board's root run:
+
+      ampy --port /board/serial/port put adafruit_library
+
+    Or to put a local folder adafruit_library on the board under the path
+    /lib/adafruit_library on the board run:
+
+      ampy --port /board/serial/port put adafruit_library /lib/adafruit_library
     """
     # Use the local filename if no remote filename is provided.
-    if remote_file is None:
-        remote_file = os.path.basename(local_file.name)
-    # Put the file on the board.
-    board_files = files.Files(_board)
-    board_files.put(remote_file, local_file.read())
+    if remote is None:
+        remote = os.path.basename(os.path.abspath(local))
+    # Check if path is a folder and do recursive copy of everything inside it.
+    # Otherwise it's a file and should simply be copied over.
+    if os.path.isdir(local):
+        # Directory copy, create the directory and walk all children to copy
+        # over the files.
+        board_files = files.Files(_board)
+        for parent, child_dirs, child_files in os.walk(local):
+            # Create board filesystem absolute path to parent directory.
+            remote_parent = posixpath.normpath(posixpath.join(remote, os.path.relpath(parent, local)))
+            try:
+                # Create remote parent directory.
+                board_files.mkdir(remote_parent)
+                # Loop through all the files and put them on the board too.
+                for filename in child_files:
+                    with open(os.path.join(parent, filename), 'rb') as infile:
+                        remote_filename = posixpath.join(remote_parent, filename)
+                        board_files.put(remote_filename, infile.read())
+            except files.DirectoryExistsError:
+                # Ignore errors for directories that already exist.
+                pass
+
+    else:
+        # File copy, open the file and copy its contents to the board.
+        # Put the file on the board.
+        with open(local, 'rb') as infile:
+            board_files = files.Files(_board)
+            board_files.put(remote, infile.read())
 
 @cli.command()
 @click.argument('remote_file')
@@ -168,6 +224,24 @@ def rm(remote_file):
     # Delete the provided file/directory on the board.
     board_files = files.Files(_board)
     board_files.rm(remote_file)
+
+@cli.command()
+@click.argument('remote_folder')
+def rmdir(remote_folder):
+    """Forcefully remove a folder and all its children from the board.
+
+    Remove the specified folder from the board's filesystem.  Must specify one
+    argument which is the path to the folder to delete.  This will delete the
+    directory and ALL of its children recursively, use with caution!
+
+    For example to delete everything under /adafruit_library from the root of a
+    board run:
+
+      ampy --port /board/serial/port rmdir adafruit_library
+    """
+    # Delete the provided file/directory on the board.
+    board_files = files.Files(_board)
+    board_files.rmdir(remote_folder)
 
 @cli.command()
 @click.argument('local_file')

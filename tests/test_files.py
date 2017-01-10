@@ -103,6 +103,19 @@ class TestFiles(unittest.TestCase):
             board_files = files.Files(pyboard)
             result = board_files.rm('foo')
 
+    def test_rmdir(self):
+        pyboard = mock.Mock()
+        pyboard.exec_ = mock.Mock(return_value=b"")
+        board_files = files.Files(pyboard)
+        board_files.rmdir('foo')
+
+    def test_rmdir_folder_doesnt_exist(self):
+        pyboard = mock.Mock()
+        pyboard.exec_ = mock.Mock(side_effect=PyboardError('exception', b'', b'Traceback (most recent call last):\r\n  File "<stdin>", line 3, in <module>\r\nOSError: [Errno 2] ENOENT\r\n'))
+        with self.raisesRegex(RuntimeError, 'No such directory: foo'):
+            board_files = files.Files(pyboard)
+            result = board_files.rmdir('foo')
+
     def test_run_with_output(self):
         pyboard = mock.Mock()
         pyboard.execfile = mock.Mock(return_value=b"Hello world")
@@ -133,6 +146,6 @@ class TestFiles(unittest.TestCase):
     def test_mkdir_directory_already_exists(self):
         pyboard = mock.Mock()
         pyboard.exec_ = mock.Mock(side_effect=PyboardError('exception', b'', b'Traceback (most recent call last):\r\n  File "<stdin>", line 3, in <module>\r\nOSError: [Errno 17] EEXIST\r\n'))
-        with self.raisesRegex(RuntimeError, 'Directory already exists: /foo'):
+        with self.raisesRegex(files.DirectoryExistsError, 'Directory already exists: /foo'):
             board_files = files.Files(pyboard)
             board_files.mkdir('/foo')
