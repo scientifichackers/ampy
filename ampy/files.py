@@ -84,13 +84,15 @@ class Files(object):
         specified directory.
         """
         # Execute os.listdir() command on the board.
+        import stat
+
         command = """
             import uos
-            print(uos.listdir('{0}'))
+            print({{f : uos.stat(f)[0] for f in uos.listdir('{0}')}})
         """.format(directory)
         self._pyboard.enter_raw_repl()
         try:
-            out = self._pyboard.exec_(textwrap.dedent(command))
+            name2stat = self._pyboard.exec_(textwrap.dedent(command))
         except PyboardError as ex:
             # Check if this is an OSError #2, i.e. directory doesn't exist and
             # rethrow it as something more descriptive.
@@ -98,9 +100,15 @@ class Files(object):
                 raise RuntimeError('No such directory: {0}'.format(directory))
             else:
                 raise ex
+        out = []
+        for f_name, f_stat in sorted(ast.literal_eval(name2stat.decode('utf-8')).items()):
+            if stat.S_ISDIR(f_stat):
+                out.append(f_name + '\\')
+            else:
+                out.append(f_name)
         self._pyboard.exit_raw_repl()
         # Parse the result list and return it.
-        return ast.literal_eval(out.decode('utf-8'))
+        return out
 
     def mkdir(self, directory):
         """Create the specified directory.  Note this cannot create a recursive
