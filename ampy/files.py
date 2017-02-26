@@ -103,7 +103,7 @@ class Files(object):
         out = []
         for f_name, f_stat in sorted(ast.literal_eval(name2stat.decode('utf-8')).items()):
             if stat.S_ISDIR(f_stat):
-                out.append(f_name + '\\')
+                out.append(f_name + '/')
             else:
                 out.append(f_name)
         self._pyboard.exit_raw_repl()
