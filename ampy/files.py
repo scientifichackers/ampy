@@ -85,8 +85,11 @@ class Files(object):
         """
         # Execute os.listdir() command on the board.
         command = """
-            import uos
-            print(uos.listdir('{0}'))
+            try:
+                import os
+            except ImportError:
+                import uos as os
+            print(os.listdir('{0}'))
         """.format(directory)
         self._pyboard.enter_raw_repl()
         try:
@@ -108,8 +111,11 @@ class Files(object):
         """
         # Execute os.mkdir command on the board.
         command = """
-            import uos
-            uos.mkdir('{0}')
+            try:
+                import os
+            except ImportError:
+                import uos as os
+            os.mkdir('{0}')
         """.format(directory)
         self._pyboard.enter_raw_repl()
         try:
@@ -143,8 +149,11 @@ class Files(object):
     def rm(self, filename):
         """Remove the specified file or directory."""
         command = """
-            import uos
-            uos.remove('{0}')
+            try:
+                import os
+            except ImportError:
+                import uos as os
+            os.remove('{0}')
         """.format(filename)
         self._pyboard.enter_raw_repl()
         try:
@@ -174,18 +183,21 @@ class Files(object):
         # subdirectories.  Finally when finished clearing all the children the
         # parent directory is deleted.
         command = """
-            import uos
+            try:
+                import os
+            except ImportError:
+                import uos as os
             def rmdir(directory):
-                uos.chdir(directory)
-                for f in uos.listdir():
+                os.chdir(directory)
+                for f in os.listdir():
                     try:
-                        uos.remove(f)
+                        os.remove(f)
                     except OSError:
                         pass
-                for f in uos.listdir():
+                for f in os.listdir():
                     rmdir(f)
-                uos.chdir('..')
-                uos.rmdir(directory)
+                os.chdir('..')
+                os.rmdir(directory)
             rmdir('{0}')
         """.format(directory)
         self._pyboard.enter_raw_repl()
