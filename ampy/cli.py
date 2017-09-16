@@ -26,6 +26,7 @@ import posixpath
 import re
 
 import click
+import termcolor
 
 import ampy.files as files
 import ampy.pyboard as pyboard
@@ -289,6 +290,12 @@ def reset():
 if __name__ == '__main__':
     try:
         cli()
+    except BaseException as e:
+        ctx = cli.make_context(__file__, click.get_os_args())
+        port = ctx.params["port"]
+        baud = ctx.params["baud"]
+        text = "{}: {} (Port:{}\tBaud:{})".format(type(e).__name__, e, port, baud)
+        termcolor.cprint(text,   color="red", attrs=['bold', 'underline', 'dark', 'concealed'])
     finally:
         # Try to ensure the board serial connection is always gracefully closed.
         if _board is not None:
