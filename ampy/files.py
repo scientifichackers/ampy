@@ -78,6 +78,38 @@ class Files(object):
         self._pyboard.exit_raw_repl()
         return out
 
+    def sha1sum(self, filename):
+        """Retrieve the sha1sum of the specified file and return its digest.
+        """
+        # Open the file and read it a few bytes at a time and print out the
+        # raw bytes.  Be careful not to overload the UART buffer so only write
+        # a few bytes at a time, and don't use print since it adds newlines and
+        # expects string data.
+        command = """
+            import sys, uhashlib, ubinascii
+            with open('{0}', 'rb') as infile:
+                value = uhashlib.sha1()
+                while True:
+                    result = infile.read({1})
+                    if result == b'':
+                        break
+                    else:
+                        value.update(result)
+                len = sys.stdout.write(ubinascii.hexlify(value.digest()))
+        """.format(filename, BUFFER_SIZE)
+        self._pyboard.enter_raw_repl()
+        try:
+            out = self._pyboard.exec_(textwrap.dedent(command))
+        except PyboardError as ex:
+            # Check if this is an OSError #2, i.e. file doesn't exist and
+            # rethrow it as something more descriptive.
+            if ex.args[2].decode('utf-8').find('OSError: [Errno 2] ENOENT') != -1:
+                raise RuntimeError('No such file: {0}'.format(filename))
+            else:
+                raise ex
+        self._pyboard.exit_raw_repl()
+        return out.decode()
+
     def ls(self, directory='/'):
         """List the contents of the specified directory (or root if none is
         specified).  Returns a list of strings with the names of files in the

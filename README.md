@@ -55,6 +55,7 @@ You should see usage information displayed like below:
       put  Put a file on the board.
       rm   Remove a file from the board.
       run  Run a script and print its output.
+      sha1sum  Retrieve sha1sum of a file from the board.
 
 If you'd like to install from the Github source then use the standard Python
 setup.py install (or develop mode):
