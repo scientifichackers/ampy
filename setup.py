@@ -44,7 +44,7 @@ setup(
     ],
     keywords='micropython',
     packages=find_packages(),
-    install_requires=['click', 'pyserial'],
+    install_requires=['click', 'pyserial', 'termcolor'],
     entry_points={
         'console_scripts': [
             'ampy=ampy.cli:cli',
