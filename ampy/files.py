@@ -86,7 +86,11 @@ class Files(object):
         # a few bytes at a time, and don't use print since it adds newlines and
         # expects string data.
         command = """
-            import sys, uhashlib, ubinascii
+            import sys, ubinascii
+            try:
+                import uhashlib
+            except ImportError:
+                import hashlib as uhashlib
             with open('{0}', 'rb') as infile:
                 value = uhashlib.sha1()
                 while True:
