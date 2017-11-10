@@ -101,8 +101,9 @@ def get(remote_file, local_file):
         local_file.write(contents)
 
 @cli.command()
+@click.option('--exists-okay', is_flag=True)
 @click.argument('directory')
-def mkdir(directory):
+def mkdir(directory, exists_okay):
     """
     Create a directory on the board.
 
@@ -119,7 +120,8 @@ def mkdir(directory):
     """
     # Run the mkdir command.
     board_files = files.Files(_board)
-    board_files.mkdir(directory)
+    board_files.mkdir(directory,
+                      exists_okay=exists_okay)
 
 @cli.command()
 @click.argument('directory', default='/')

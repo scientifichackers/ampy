@@ -105,7 +105,7 @@ class Files(object):
         # Parse the result list and return it.
         return ast.literal_eval(out.decode('utf-8'))
 
-    def mkdir(self, directory):
+    def mkdir(self, directory, exists_okay=False):
         """Create the specified directory.  Note this cannot create a recursive
         hierarchy of directories, instead each one should be created separately.
         """
@@ -123,7 +123,8 @@ class Files(object):
         except PyboardError as ex:
             # Check if this is an OSError #17, i.e. directory already exists.
             if ex.args[2].decode('utf-8').find('OSError: [Errno 17] EEXIST') != -1:
-                raise DirectoryExistsError('Directory already exists: {0}'.format(directory))
+                if not exists_okay:
+                    raise DirectoryExistsError('Directory already exists: {0}'.format(directory))
             else:
                 raise ex
         self._pyboard.exit_raw_repl()
