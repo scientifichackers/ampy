@@ -172,7 +172,7 @@ class Files(object):
                 raise ex
         self._pyboard.exit_raw_repl()
 
-    def rmdir(self, directory):
+    def rmdir(self, directory, missing_okay=False):
         """Forcefully remove the specified directory and all its children."""
         # Build a script to walk an entire directory structure and delete every
         # file and subfolder.  This is tricky because MicroPython has no os.walk
@@ -209,7 +209,8 @@ class Files(object):
             # Check if this is an OSError #2, i.e. directory doesn't exist
             # and rethrow it as something more descriptive.
             if message.find('OSError: [Errno 2] ENOENT') != -1:
-                raise RuntimeError('No such directory: {0}'.format(directory))
+                if not missing_okay:
+                    raise RuntimeError('No such directory: {0}'.format(directory))
             else:
                 raise ex
         self._pyboard.exit_raw_repl()
