@@ -101,7 +101,7 @@ def get(remote_file, local_file):
         local_file.write(contents)
 
 @cli.command()
-@click.option('--exists-okay', is_flag=True)
+@click.option('--exists-okay', is_flag=True, help='Ignore if the directory already exists.')
 @click.argument('directory')
 def mkdir(directory, exists_okay):
     """
@@ -228,7 +228,7 @@ def rm(remote_file):
     board_files.rm(remote_file)
 
 @cli.command()
-@click.option('--missing-okay', is_flag=True)
+@click.option('--missing-okay', is_flag=True, help='Ignore if the directory does not exist.')
 @click.argument('remote_folder')
 def rmdir(remote_folder, missing_okay):
     """Forcefully remove a folder and all its children from the board.
