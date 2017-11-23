@@ -101,8 +101,9 @@ def get(remote_file, local_file):
         local_file.write(contents)
 
 @cli.command()
+@click.option('--exists-okay', is_flag=True, help='Ignore if the directory already exists.')
 @click.argument('directory')
-def mkdir(directory):
+def mkdir(directory, exists_okay):
     """
     Create a directory on the board.
 
@@ -119,7 +120,8 @@ def mkdir(directory):
     """
     # Run the mkdir command.
     board_files = files.Files(_board)
-    board_files.mkdir(directory)
+    board_files.mkdir(directory,
+                      exists_okay=exists_okay)
 
 @cli.command()
 @click.argument('directory', default='/')
@@ -226,8 +228,9 @@ def rm(remote_file):
     board_files.rm(remote_file)
 
 @cli.command()
+@click.option('--missing-okay', is_flag=True, help='Ignore if the directory does not exist.')
 @click.argument('remote_folder')
-def rmdir(remote_folder):
+def rmdir(remote_folder, missing_okay):
     """Forcefully remove a folder and all its children from the board.
 
     Remove the specified folder from the board's filesystem.  Must specify one
@@ -241,7 +244,7 @@ def rmdir(remote_folder):
     """
     # Delete the provided file/directory on the board.
     board_files = files.Files(_board)
-    board_files.rmdir(remote_folder)
+    board_files.rmdir(remote_folder, missing_okay=missing_okay)
 
 @cli.command()
 @click.argument('local_file')
