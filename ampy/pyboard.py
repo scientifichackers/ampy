@@ -40,6 +40,8 @@ Or:
 import sys
 import time
 
+_rawdelay = None
+
 try:
     stdout = sys.stdout.buffer
 except AttributeError:
@@ -117,7 +119,9 @@ class TelnetToSerial:
             return n_waiting
 
 class Pyboard:
-    def __init__(self, device, baudrate=115200, user='micro', password='python', wait=0):
+    def __init__(self, device, baudrate=115200, user='micro', password='python', wait=0, rawdelay=0):
+        global _rawdelay
+        _rawdelay = rawdelay
         if device and device[0].isdigit() and device[-1].isdigit() and device.count('.') == 3:
             # device looks like an IP address
             self.serial = TelnetToSerial(device, user, password, read_timeout=10)
@@ -169,6 +173,10 @@ class Pyboard:
         return data
 
     def enter_raw_repl(self):
+        # Brief delay before sending RAW MODE char if requests
+        if _rawdelay > 0:
+            time.sleep(_rawdelay)
+
         self.serial.write(b'\r\x03\x03') # ctrl-C twice: interrupt any running program
 
         # flush input (without relying on serial.flushInput())
