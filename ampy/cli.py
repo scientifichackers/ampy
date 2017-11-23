@@ -54,8 +54,11 @@ def windows_full_port_name(portname):
 @click.option('--baud', '-b', envvar='AMPY_BAUD', default=115200, type=click.INT,
               help='Baud rate for the serial connection (default 115200).  Can optionally specify with AMPY_BAUD environment variable.',
               metavar='BAUD')
+@click.option('--delay', '-d', envvar='AMPY_DELAY', default=0, type=click.FLOAT,
+              help='Delay in seconds before entering RAW MODE (default 0). Can optionally specify with AMPY_DELAY environment variable.',
+              metavar='DELAY')
 @click.version_option()
-def cli(port, baud):
+def cli(port, baud, delay):
     """ampy - Adafruit MicroPython Tool
 
     Ampy is a tool to control MicroPython boards over a serial connection.  Using
@@ -67,7 +70,7 @@ def cli(port, baud):
     # windows_full_port_name function).
     if platform.system() == 'Windows':
         port = windows_full_port_name(port)
-    _board = pyboard.Pyboard(port, baudrate=baud)
+    _board = pyboard.Pyboard(port, baudrate=baud, rawdelay=delay)
 
 @cli.command()
 @click.argument('remote_file')
