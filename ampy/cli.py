@@ -103,6 +103,25 @@ def get(remote_file, local_file):
     else:
         local_file.write(contents)
 
+
+@cli.command()
+@click.argument('remote_file')
+def sha1sum(remote_file):
+    """
+    Retrieve sha1sum of a file from the board.
+
+    Sha1sum will calculate sha1 hash a file from the board and print its hex digest.
+    You only need to pass the path to the file.
+    For example to retrieve the sha1 hash of boot.py and print it out run:
+
+      ampy --port /board/serial/port sha1sum boot.py
+    """
+    # Get the hash of the file.
+    board_files = files.Files(_board)
+    sha1_hash = board_files.sha1sum(remote_file)
+    # Print the hash output.
+    print(sha1_hash)
+
 @cli.command()
 @click.option('--exists-okay', is_flag=True, help='Ignore if the directory already exists.')
 @click.argument('directory')
@@ -196,14 +215,23 @@ def put(local, remote):
             try:
                 # Create remote parent directory.
                 board_files.mkdir(remote_parent)
-                # Loop through all the files and put them on the board too.
-                for filename in child_files:
-                    with open(os.path.join(parent, filename), 'rb') as infile:
-                        remote_filename = posixpath.join(remote_parent, filename)
-                        board_files.put(remote_filename, infile.read())
             except files.DirectoryExistsError:
                 # Ignore errors for directories that already exist.
                 pass
+
+            # Loop through all the files and put them on the board too.
+            for filename in child_files:
+                with open(os.path.join(parent, filename), 'rb') as infile:
+                    remote_filename = posixpath.join(remote_parent, filename)
+                    import hashlib
+                    local_file = infile.read()
+                    local_hash = hashlib.sha1(local_file).hexdigest()
+                    try:
+                        remote_hash1 = board_files.sha1sum(remote_filename)
+                    except RuntimeError:
+                        remote_hash1 = ""
+                    if local_hash != remote_hash1:
+                        board_files.put(remote_filename, local_file)
 
     else:
         # File copy, open the file and copy its contents to the board.

@@ -70,6 +70,13 @@ class TestFiles(unittest.TestCase):
         result = board_files.get('foo.txt')
         self.assertEqual(result, b"hello world")
 
+    def test_sha1sum(self):
+        pyboard = mock.Mock()
+        pyboard.exec_ = mock.Mock(return_value=b"da39a3ee5e6b4b0d3255bfef95601890afd80709")
+        board_files = files.Files(pyboard)
+        result = board_files.sha1sum('foo.txt')
+        self.assertEqual(result, "da39a3ee5e6b4b0d3255bfef95601890afd80709")
+
     def test_get_bad_file(self):
         pyboard = mock.Mock()
         pyboard.exec_ = mock.Mock(side_effect=PyboardError('exception', b'', b'Traceback (most recent call last):\r\n  File "<stdin>", line 3, in <module>\r\nOSError: [Errno 2] ENOENT\r\n'))
