@@ -281,9 +281,13 @@ def run(local_file, no_output):
     """
     # Run the provided file and print its output.
     board_files = files.Files(_board)
-    output = board_files.run(local_file, not no_output)
-    if output is not None:
-        print(output.decode('utf-8'), end='')
+    try:
+        output = board_files.run(local_file, not no_output)
+        if output is not None:
+            print(output.decode('utf-8'), end='')
+    except IOError:
+        click.echo('Failed to find or read input file: {0}'.format(local_file),
+                   err=True)
 
 @cli.command()
 def reset():
