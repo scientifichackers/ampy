@@ -128,7 +128,9 @@ def mkdir(directory, exists_okay):
 
 @cli.command()
 @click.argument('directory', default='/')
-def ls(directory):
+@click.option('--long_format', '-l', is_flag=True,
+              help="Print long format info including size of files.  Note the size of directories is not supported and will show 0 values.")
+def ls(directory, long_format):
     """List contents of a directory on the board.
 
     Can pass an optional argument which is the path to the directory.  The
@@ -141,10 +143,15 @@ def ls(directory):
     Or to list the contents of the /foo/bar directory on the board run:
 
       ampy --port /board/serial/port ls /foo/bar
+
+    Add the -l or --long_format flag to print the size of files (however note
+    MicroPython does not calculate the size of folders and will show 0 bytes):
+
+      ampy --port /board/serial/port ls -l /foo/bar
     """
     # List each file/directory on a separate line.
     board_files = files.Files(_board)
-    for f in board_files.ls(directory):
+    for f in board_files.ls(directory, long_format=long_format):
         print(f)
 
 @cli.command()

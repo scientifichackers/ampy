@@ -78,19 +78,40 @@ class Files(object):
         self._pyboard.exit_raw_repl()
         return out
 
-    def ls(self, directory='/'):
+    def ls(self, directory='/', long_format=True):
         """List the contents of the specified directory (or root if none is
         specified).  Returns a list of strings with the names of files in the
-        specified directory.
+        specified directory.  If long_format is True then a list of 2-tuples
+        with the name and size (in bytes) of the item is returned.  Note that
+        it appears the size of directories is not supported by MicroPython and
+        will always return 0 (i.e. no recursive size computation).
         """
+        # Make sure directory ends in a slash.
+        if not directory.endswith('/'):
+            directory += '/'
         # Execute os.listdir() command on the board.
-        command = """
-            try:
-                import os
-            except ImportError:
-                import uos as os
-            print(os.listdir('{0}'))
-        """.format(directory)
+        if long_format:
+            command = """
+                try:
+                    import os
+                except ImportError:
+                    import uos as os
+                d = '{0}'
+                r = []
+                for f in os.listdir(d):
+                    fp = d + f
+                    _, _, _, _, _, _, size, _, _, _ = os.stat(fp)
+                    r.append('{{0}} - {{1}} bytes'.format(f, size))
+                print(r)
+            """.format(directory)
+        else:
+            command = """
+                try:
+                    import os
+                except ImportError:
+                    import uos as os
+                print(os.listdir('{0}'))
+            """.format(directory)
         self._pyboard.enter_raw_repl()
         try:
             out = self._pyboard.exec_(textwrap.dedent(command))
