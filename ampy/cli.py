@@ -24,6 +24,7 @@ import os
 import platform
 import posixpath
 import re
+import serial.serialutil
 
 import click
 
@@ -290,18 +291,58 @@ def run(local_file, no_output):
                    err=True)
 
 @cli.command()
-def reset():
+@click.option('--bootloader', 'mode', flag_value='BOOTLOADER',
+    help='Reboot into the bootloader')
+@click.option('--hard', 'mode', flag_value='NORMAL',
+    help='Perform a hard reboot, including running init.py')
+@click.option('--repl', 'mode', flag_value='SOFT', default=True,
+    help='Perform a soft reboot, entering the REPL  [default]')
+@click.option('--safe', 'mode', flag_value='SAFE_MODE',
+    help='Perform a safe-mode reboot.  User code will not be run and the filesystem will be writeable over USB')
+def reset(mode):
     """Perform soft reset/reboot of the board.
 
-    Will connect to the board and perform a soft reset.  No arguments are
-    necessary:
+    Will connect to the board and perform a reset.  Depending on the board
+    and firmware, several different types of reset may be supported.
 
       ampy --port /board/serial/port reset
     """
-    # Enter then exit the raw REPL, in the process the board will be soft reset
-    # (part of enter raw REPL).
     _board.enter_raw_repl()
-    _board.exit_raw_repl()
+    if mode == 'SOFT':
+        _board.exit_raw_repl()
+        return
+
+    _board.exec_('''if 1:
+        def on_next_reset(x):
+            try:
+                import microcontroller
+            except:
+                if x == 'NORMAL': return ''
+                return 'Reset mode only supported on CircuitPython'
+            try:
+                microcontroller.on_next_reset(getattr(microcontroller.RunMode, x))
+            except ValueError as e:
+                return str(e)
+            return ''
+        def reset():
+            try:
+                import microcontroller
+            except:
+                import machine as microcontroller
+            microcontroller.reset()
+    ''')
+    r = _board.eval('on_next_reset({})'.format(repr(mode)))
+    print("here we are", repr(r))
+    if r:
+        click.echo(r, err=True)
+        return
+
+    try:
+        _board.exec_('reset()')
+    except serial.serialutil.SerialException as e:
+        # An error is expected to occur, as the board should disconnect from
+        # serial when restarted via microcontroller.reset()
+        pass
 
 if __name__ == '__main__':
     try:
