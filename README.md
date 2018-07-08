@@ -77,7 +77,18 @@ You should see a list of files on the board's root directory printed to the
 terminal.  Note that you'll need to change the port parameter to the name or path
 to the serial port that the MicroPython board is connected to.
 
-For convenience you can set an AMPY_PORT environment variable which will be used
+Other commands are available, run ampy with --help to see more information:
+
+    ampy --help
+
+Each subcommand has its own help, for example to see help for the ls command  run (note you
+unfortunately must have a board connected and serial port specified):
+
+    ampy --port /dev/tty.SLAB_USBtoUART ls --help
+
+## Configuration
+
+For convenience you can set an `AMPY_PORT` environment variable which will be used
 if the port parameter is not specified.  For example on Linux or OSX:
 
     export AMPY_PORT=/dev/tty.SLAB_USBtoUART
@@ -88,11 +99,19 @@ Or on Windows (untested) try the SET command:
     set AMPY_PORT=COM4
     ampy ls
 
-Other commands are available, run ampy with --help to see more information:
+Similarly, you can set `AMPY_BAUD` and `AMPY_DELAY` to control your baud rate and
+the delay before entering RAW MODE.
 
-    ampy --help
+To set these variables automatically each time you run `ampy`, copy them into a
+file named `.ampy`:
 
-Each subcommand has its own help, for example to see help for the ls command  run (note you
-unfortunately must have a board connected and serial port specified):
+```sh
+# Example .ampy file
+# Please fill in your own port, baud rate, and delay
+AMPY_PORT=/dev/cu.wchusbserial1410
+AMPY_BAUD=115200
+AMPY_DELAY=0.5 # Fix for macOS users' "Could not enter raw repl"
+```
 
-    ampy --port /dev/tty.SLAB_USBtoUART ls --help
+You can put the `.ampy` file in your working directory, one of its parents, or in
+your home directory.
