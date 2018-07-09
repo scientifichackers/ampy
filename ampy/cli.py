@@ -31,7 +31,7 @@ import dotenv
 
 # Load AMPY_PORT et al from .ampy file
 # Performed here because we need to beat click's decorators.
-config = dotenv.find_dotenv(filename='.ampy')
+config = dotenv.find_dotenv(filename='.ampy', usecwd=True)
 if config:
     dotenv.load_dotenv(dotenv_path=config)
 
