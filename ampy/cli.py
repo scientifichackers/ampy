@@ -27,6 +27,13 @@ import re
 import serial.serialutil
 
 import click
+import dotenv
+
+# Load AMPY_PORT et al from .ampy file
+# Performed here because we need to beat click's decorators.
+config = dotenv.find_dotenv(filename='.ampy', usecwd=True)
+if config:
+    dotenv.load_dotenv(dotenv_path=config)
 
 import ampy.files as files
 import ampy.pyboard as pyboard
