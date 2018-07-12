@@ -110,7 +110,8 @@ file named `.ampy`:
 # Please fill in your own port, baud rate, and delay
 AMPY_PORT=/dev/cu.wchusbserial1410
 AMPY_BAUD=115200
-AMPY_DELAY=0.5 # Fix for macOS users' "Could not enter raw repl"
+# Fix for macOS users' "Could not enter raw repl"; try 2.0 and lower from there:
+AMPY_DELAY=0.5
 ```
 
 You can put the `.ampy` file in your working directory, one of its parents, or in
