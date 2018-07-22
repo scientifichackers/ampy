@@ -106,7 +106,7 @@ class Files(object):
 
         if recursive:
             command += """\
-                def listdir(dir):
+                def listdir(directory):
                     result = set()
 
                     def _listdir(dir_or_file):
@@ -132,15 +132,15 @@ class Files(object):
                             else:
                                 result.add(dir_or_file)                     
 
-                    _listdir(dir)
+                    _listdir(directory)
                     return sorted(result)\n"""
         else:
             command += """\
-                def listdir(dir):
-                    if dir == '/':                
-                        return sorted([dir + f for f in os.listdir(dir)])
+                def listdir(directory):
+                    if directory == '/':                
+                        return sorted([directory + f for f in os.listdir(directory)])
                     else:
-                        return sorted([dir + '/' + f for f in os.listdir(dir)])\n"""
+                        return sorted([directory + '/' + f for f in os.listdir(directory)])\n"""
 
         # Execute os.listdir() command on the board.
         if long_format:
