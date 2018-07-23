@@ -31,7 +31,7 @@ import dotenv
 
 # Load AMPY_PORT et al from .ampy file
 # Performed here because we need to beat click's decorators.
-config = dotenv.find_dotenv(filename='.ampy', usecwd=True)
+config = dotenv.find_dotenv(filename=".ampy", usecwd=True)
 if config:
     dotenv.load_dotenv(dotenv_path=config)
 
@@ -48,23 +48,41 @@ def windows_full_port_name(portname):
     # 9 are just referred to by COM1, COM2, etc. (wacky!)  See this post for
     # more info and where this code came from:
     # http://eli.thegreenplace.net/2009/07/31/listing-all-serial-ports-on-windows-with-python/
-    m = re.match('^COM(\d+)$', portname)
+    m = re.match("^COM(\d+)$", portname)
     if m and int(m.group(1)) < 10:
         return portname
     else:
-        return '\\\\.\\{0}'.format(portname)
+        return "\\\\.\\{0}".format(portname)
 
 
 @click.group()
-@click.option('--port', '-p', envvar='AMPY_PORT', required=True, type=click.STRING,
-              help='Name of serial port for connected board.  Can optionally specify with AMPY_PORT environment variable.',
-              metavar='PORT')
-@click.option('--baud', '-b', envvar='AMPY_BAUD', default=115200, type=click.INT,
-              help='Baud rate for the serial connection (default 115200).  Can optionally specify with AMPY_BAUD environment variable.',
-              metavar='BAUD')
-@click.option('--delay', '-d', envvar='AMPY_DELAY', default=0, type=click.FLOAT,
-              help='Delay in seconds before entering RAW MODE (default 0). Can optionally specify with AMPY_DELAY environment variable.',
-              metavar='DELAY')
+@click.option(
+    "--port",
+    "-p",
+    envvar="AMPY_PORT",
+    required=True,
+    type=click.STRING,
+    help="Name of serial port for connected board.  Can optionally specify with AMPY_PORT environment variable.",
+    metavar="PORT",
+)
+@click.option(
+    "--baud",
+    "-b",
+    envvar="AMPY_BAUD",
+    default=115200,
+    type=click.INT,
+    help="Baud rate for the serial connection (default 115200).  Can optionally specify with AMPY_BAUD environment variable.",
+    metavar="BAUD",
+)
+@click.option(
+    "--delay",
+    "-d",
+    envvar="AMPY_DELAY",
+    default=0,
+    type=click.FLOAT,
+    help="Delay in seconds before entering RAW MODE (default 0). Can optionally specify with AMPY_DELAY environment variable.",
+    metavar="DELAY",
+)
 @click.version_option()
 def cli(port, baud, delay):
     """ampy - Adafruit MicroPython Tool
@@ -76,13 +94,14 @@ def cli(port, baud, delay):
     global _board
     # On Windows fix the COM port path name for ports above 9 (see comment in
     # windows_full_port_name function).
-    if platform.system() == 'Windows':
+    if platform.system() == "Windows":
         port = windows_full_port_name(port)
     _board = pyboard.Pyboard(port, baudrate=baud, rawdelay=delay)
 
+
 @cli.command()
-@click.argument('remote_file')
-@click.argument('local_file', type=click.File('wb'), required=False)
+@click.argument("remote_file")
+@click.argument("local_file", type=click.File("wb"), required=False)
 def get(remote_file, local_file):
     """
     Retrieve a file from the board.
@@ -107,13 +126,16 @@ def get(remote_file, local_file):
     contents = board_files.get(remote_file)
     # Print the file out if no local file was provided, otherwise save it.
     if local_file is None:
-        print(contents.decode('utf-8'))
+        print(contents.decode("utf-8"))
     else:
         local_file.write(contents)
 
+
 @cli.command()
-@click.option('--exists-okay', is_flag=True, help='Ignore if the directory already exists.')
-@click.argument('directory')
+@click.option(
+    "--exists-okay", is_flag=True, help="Ignore if the directory already exists."
+)
+@click.argument("directory")
 def mkdir(directory, exists_okay):
     """
     Create a directory on the board.
@@ -131,14 +153,24 @@ def mkdir(directory, exists_okay):
     """
     # Run the mkdir command.
     board_files = files.Files(_board)
-    board_files.mkdir(directory,
-                      exists_okay=exists_okay)
+    board_files.mkdir(directory, exists_okay=exists_okay)
+
 
 @cli.command()
-@click.argument('directory', default='/')
-@click.option('--long_format', '-l', is_flag=True,
-              help="Print long format info including size of files.  Note the size of directories is not supported and will show 0 values.")
-def ls(directory, long_format):
+@click.argument("directory", default="/")
+@click.option(
+    "--long_format",
+    "-l",
+    is_flag=True,
+    help="Print long format info including size of files.  Note the size of directories is not supported and will show 0 values.",
+)
+@click.option(
+    "--recursive",
+    "-r",
+    is_flag=True,
+    help="recursively list all files and (empty) directories.",
+)
+def ls(directory, long_format, recursive):
     """List contents of a directory on the board.
 
     Can pass an optional argument which is the path to the directory.  The
@@ -159,12 +191,13 @@ def ls(directory, long_format):
     """
     # List each file/directory on a separate line.
     board_files = files.Files(_board)
-    for f in board_files.ls(directory, long_format=long_format):
+    for f in board_files.ls(directory, long_format=long_format, recursive=recursive):
         print(f)
 
+
 @cli.command()
-@click.argument('local', type=click.Path(exists=True))
-@click.argument('remote', required=False)
+@click.argument("local", type=click.Path(exists=True))
+@click.argument("remote", required=False)
 def put(local, remote):
     """Put a file or folder and its contents on the board.
 
@@ -207,13 +240,15 @@ def put(local, remote):
         board_files = files.Files(_board)
         for parent, child_dirs, child_files in os.walk(local):
             # Create board filesystem absolute path to parent directory.
-            remote_parent = posixpath.normpath(posixpath.join(remote, os.path.relpath(parent, local)))
+            remote_parent = posixpath.normpath(
+                posixpath.join(remote, os.path.relpath(parent, local))
+            )
             try:
                 # Create remote parent directory.
                 board_files.mkdir(remote_parent)
                 # Loop through all the files and put them on the board too.
                 for filename in child_files:
-                    with open(os.path.join(parent, filename), 'rb') as infile:
+                    with open(os.path.join(parent, filename), "rb") as infile:
                         remote_filename = posixpath.join(remote_parent, filename)
                         board_files.put(remote_filename, infile.read())
             except files.DirectoryExistsError:
@@ -223,12 +258,13 @@ def put(local, remote):
     else:
         # File copy, open the file and copy its contents to the board.
         # Put the file on the board.
-        with open(local, 'rb') as infile:
+        with open(local, "rb") as infile:
             board_files = files.Files(_board)
             board_files.put(remote, infile.read())
 
+
 @cli.command()
-@click.argument('remote_file')
+@click.argument("remote_file")
 def rm(remote_file):
     """Remove a file from the board.
 
@@ -245,9 +281,12 @@ def rm(remote_file):
     board_files = files.Files(_board)
     board_files.rm(remote_file)
 
+
 @cli.command()
-@click.option('--missing-okay', is_flag=True, help='Ignore if the directory does not exist.')
-@click.argument('remote_folder')
+@click.option(
+    "--missing-okay", is_flag=True, help="Ignore if the directory does not exist."
+)
+@click.argument("remote_folder")
 def rmdir(remote_folder, missing_okay):
     """Forcefully remove a folder and all its children from the board.
 
@@ -264,10 +303,15 @@ def rmdir(remote_folder, missing_okay):
     board_files = files.Files(_board)
     board_files.rmdir(remote_folder, missing_okay=missing_okay)
 
+
 @cli.command()
-@click.argument('local_file')
-@click.option('--no-output', '-n', is_flag=True,
-              help="Run the code without waiting for it to finish and print output.  Use this when running code with main loops that never return.")
+@click.argument("local_file")
+@click.option(
+    "--no-output",
+    "-n",
+    is_flag=True,
+    help="Run the code without waiting for it to finish and print output.  Use this when running code with main loops that never return.",
+)
 def run(local_file, no_output):
     """Run a script and print its output.
 
@@ -292,20 +336,36 @@ def run(local_file, no_output):
     try:
         output = board_files.run(local_file, not no_output)
         if output is not None:
-            print(output.decode('utf-8'), end='')
+            print(output.decode("utf-8"), end="")
     except IOError:
-        click.echo('Failed to find or read input file: {0}'.format(local_file),
-                   err=True)
+        click.echo(
+            "Failed to find or read input file: {0}".format(local_file), err=True
+        )
+
 
 @cli.command()
-@click.option('--bootloader', 'mode', flag_value='BOOTLOADER',
-    help='Reboot into the bootloader')
-@click.option('--hard', 'mode', flag_value='NORMAL',
-    help='Perform a hard reboot, including running init.py')
-@click.option('--repl', 'mode', flag_value='SOFT', default=True,
-    help='Perform a soft reboot, entering the REPL  [default]')
-@click.option('--safe', 'mode', flag_value='SAFE_MODE',
-    help='Perform a safe-mode reboot.  User code will not be run and the filesystem will be writeable over USB')
+@click.option(
+    "--bootloader", "mode", flag_value="BOOTLOADER", help="Reboot into the bootloader"
+)
+@click.option(
+    "--hard",
+    "mode",
+    flag_value="NORMAL",
+    help="Perform a hard reboot, including running init.py",
+)
+@click.option(
+    "--repl",
+    "mode",
+    flag_value="SOFT",
+    default=True,
+    help="Perform a soft reboot, entering the REPL  [default]",
+)
+@click.option(
+    "--safe",
+    "mode",
+    flag_value="SAFE_MODE",
+    help="Perform a safe-mode reboot.  User code will not be run and the filesystem will be writeable over USB",
+)
 def reset(mode):
     """Perform soft reset/reboot of the board.
 
@@ -315,11 +375,12 @@ def reset(mode):
       ampy --port /board/serial/port reset
     """
     _board.enter_raw_repl()
-    if mode == 'SOFT':
+    if mode == "SOFT":
         _board.exit_raw_repl()
         return
 
-    _board.exec_('''if 1:
+    _board.exec_(
+        """if 1:
         def on_next_reset(x):
             try:
                 import microcontroller
@@ -337,21 +398,23 @@ def reset(mode):
             except:
                 import machine as microcontroller
             microcontroller.reset()
-    ''')
-    r = _board.eval('on_next_reset({})'.format(repr(mode)))
+    """
+    )
+    r = _board.eval("on_next_reset({})".format(repr(mode)))
     print("here we are", repr(r))
     if r:
         click.echo(r, err=True)
         return
 
     try:
-        _board.exec_('reset()')
+        _board.exec_("reset()")
     except serial.serialutil.SerialException as e:
         # An error is expected to occur, as the board should disconnect from
         # serial when restarted via microcontroller.reset()
         pass
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     try:
         cli()
     finally:
