@@ -1,0 +1,27 @@
+dist: trusty
+sudo: false
+language: python
+python:
+- '3.6'
+cache:
+  pip: true
+
+deploy:
+- provider: releases
+  api_key: "$GITHUB_TOKEN"
+  file_glob: true
+  file: ampy/**/*
+  skip_cleanup: true
+  overwrite: true
+  on:
+    tags: true
+- provider: pypi
+  user: adafruit-travis
+  on:
+    tags: true
+  password:
+    secure: O7YHAMe3gmbwrmkhZKL3S5DQXL7sOJXVTfFO2zAwv1l2liXcUEJA7LW5glQEuFdYi0ukoNhLHRHxX8L4E9ZEuceKcybZH096pWzrafvPYLeHJ9wG937F8U0UVYPU9MelOzt0NsaWvDvh9FpTCpkgmi2y5rKyGQf6WS4/73MHRdkb60zrQg5Vm4b2+ghsvpGZ7y9QQA54NWFxx40J+7+OhsAsQ5CR9Qo9XtMaYtZzmphiWtUdfzJI+m8QOZle+DaEgUYUOQHTdGTXm7Qwwecjp9dISjEmKD1IuyC9fpe9ZXvvvwPvO4ru1yVxNGLKUL5y1lOp57Y5GmEwJFOQxUgYxL/DLEzWKMu+BQwPPp1WaOdEn8EEZoF1VPYwpbHZz/H5y6byAqjkvx8qcqEFPfdtL2DZPc4HnWeDdsYAP9i5Kmt6A7pW1FDI9jWZYZO0OUY2zWchmFwmaHm200E4on2PiEtjOnNB7fDXFnMwcnV3ktKxk4L/XvcWmmpTIA5wyAUd367DYB0zyJJXdIQ79abKRJDDbH28zHzIuGd7FQRbprEamPKYFak2zj4t8PCQx75FGNI7xhZt4AURk2ahbxzstbFoYOuyuEbqf1NX7+Rq3xgcsrdt3ktL+kXBJ1wp2IKaTEN21iky/pAifOLdU+PbColbPPPLDW2lz+WXHS+5TgM=
+  distributions: "sdist bdist_wheel"
+
+install:
+- pip install -r requirements.txt

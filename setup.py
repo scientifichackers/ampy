@@ -1,4 +1,4 @@
-# Copyright (c) 2016 Adafruit Industries
+# Copyright (c) 2018 Adafruit Industries
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -17,19 +17,44 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
 from setuptools import setup, find_packages
 
-import ampy
+# Always prefer setuptools over distutils
+from setuptools import setup, find_packages
+# To use a consistent encoding
+from codecs import open
+from os import path
 
+here = path.abspath(path.dirname(__file__))
+
+# Get the long description from the README file
+with open(path.join(here, 'README.md'), encoding='utf-8') as f:
+    long_description = f.read()
 
 setup(
     name='adafruit-ampy',
-    version=ampy.__version__,
-    description='Adafruit MicroPython tool is a command line tool to interact with a MicroPython board over a serial connection.',
+
+    use_scm_version=True,
+    setup_requires=['setuptools_scm'],
+
+    description='ampy (Adafruit MicroPython tool) is a command line tool to interact with a CircuitPython orMicroPython board over a serial connection.',
+    long_description=long_description,
+    long_description_content_type='text/x-markdown',
+
+    # The project's main homepage.
     url='https://github.com/adafruit/ampy',
-    author='Tony DiCola',
-    author_email='tdicola@adafruit.com',
+
+    # Author details
+    author='Adafruit Industries',
+    author_email='circuitpython@adafruit.com',
+
+    install_requires=['click', 'pyserial', 'python-dotenv'],
+
+    # Choose your license
     license='MIT',
+
+    # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
@@ -42,9 +67,12 @@ setup(
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
     ],
-    keywords='micropython',
+
+    # What does your project relate to?
+    keywords='adafruit ampy hardware micropython circuitpython',
+
     packages=find_packages(),
-    install_requires=['click', 'pyserial', 'python-dotenv'],
+
     entry_points={
         'console_scripts': [
             'ampy=ampy.cli:cli',

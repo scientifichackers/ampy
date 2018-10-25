@@ -1,22 +1,28 @@
 # ampy
-Adafruit MicroPython Tool (ampy) - Utility to interact with a MicroPython board over a serial connection.
+Adafruit MicroPython Tool (ampy) - Utility to interact with a CircuitPython or MicroPython board over a serial connection.
 
-Ampy is meant to be a simple command line tool to manipulate files and run code on a MicroPython
-board over its serial connection.  With ampy you can send files from your computer to a MicroPython
+Ampy is meant to be a simple command line tool to manipulate files and run code on a CircuitPython or
+MicroPython board over its serial connection.
+With ampy you can send files from your computer to the
 board's file system, download files from a board to your computer, and even send a Python script
-to a board to be executed.  
+to a board to be executed.
 
 Note that ampy by design is meant to be simple and does not support advanced interaction like a shell
-or terminal to send input to a board.  Check out other MicroPython tools like [rshell](https://github.com/dhylands/rshell) 
+or terminal to send input to a board.  Check out other MicroPython tools
+like [rshell](https://github.com/dhylands/rshell)
 or [mpfshell](https://github.com/wendlers/mpfshell) for more advanced interaction with boards.
 
 ## Installation
 
 You can use ampy with either Python 2.7.x or 3.x and can install it easily from
-Python's package index.  In a terminal run the following command (assuming
+Python's package index.  On MacOS or Linux, in a terminal run the following command (assuming
 Python 3):
 
-    pip3 install adafruit-ampy
+    pip3 install --user adafruit-ampy
+
+On Windows, do:
+
+    pip install adafruit-ampy
 
 Note on some Linux and Mac OSX systems you might need to run as root with sudo:
 
@@ -25,10 +31,6 @@ Note on some Linux and Mac OSX systems you might need to run as root with sudo:
 If you don't have Python 3 then try using Python 2 with:
 
     pip install adafruit-ampy
-
-Or even in some cases (Mac OSX homebrew):
-
-    pip2 install adafruit-ampy
 
 Once installed verify you can run the ampy program and get help output:
 
@@ -67,7 +69,7 @@ Note to run the unit tests on Python 2 you must install the mock library:
 
 ## Usage
 
-Ampy is made to talk to a MicroPython board over its serial connection.  You will
+Ampy is made to talk to a CircuitPython MicroPython board over its serial connection.  You will
 need your board connected and any drivers to access it serial port installed.
 Then for example to list the files on the board run a command like:
 
