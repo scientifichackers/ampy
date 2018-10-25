@@ -40,7 +40,7 @@ setup(
 
     description='ampy (Adafruit MicroPython tool) is a command line tool to interact with a CircuitPython orMicroPython board over a serial connection.',
     long_description=long_description,
-    long_description_content_type='text/x-markdown',
+    long_description_content_type='text/markdown',
 
     # The project's main homepage.
     url='https://github.com/adafruit/ampy',
