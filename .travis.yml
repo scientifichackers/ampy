@@ -2,19 +2,12 @@ dist: trusty
 sudo: false
 language: python
 python:
+- '2.7'
 - '3.6'
 cache:
   pip: true
 
 deploy:
-- provider: releases
-  api_key: "$GITHUB_TOKEN"
-  file_glob: true
-  file: ampy/**/*
-  skip_cleanup: true
-  overwrite: true
-  on:
-    tags: true
 - provider: pypi
   user: adafruit-travis
   on:
