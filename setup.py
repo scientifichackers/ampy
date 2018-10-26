@@ -38,7 +38,7 @@ setup(
     use_scm_version=True,
     setup_requires=['setuptools_scm'],
 
-    description='ampy (Adafruit MicroPython tool) is a command line tool to interact with a CircuitPython orMicroPython board over a serial connection.',
+    description='ampy (Adafruit MicroPython tool) is a command line tool to interact with a CircuitPython or MicroPython board over a serial connection.',
     long_description=long_description,
     long_description_content_type='text/markdown',
 
