@@ -19,13 +19,17 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
+#TODO: add a json configuration in the execution path
 from __future__ import print_function
 import os
 import platform
 import posixpath
 import re
 import serial.serialutil
-
+import json # used by get_json_data()
+from pprint import pprint # used by get_json_data()
+        
 import click
 import dotenv
 
@@ -40,7 +44,8 @@ import ampy.pyboard as pyboard
 
 
 _board = None
-
+_local_path = '' 
+_remote_path = '' 
 
 def windows_full_port_name(portname):
     # Helper function to generate proper Windows COM port paths.  Apparently
@@ -54,13 +59,41 @@ def windows_full_port_name(portname):
     else:
         return "\\\\.\\{0}".format(portname)
 
+def read_json_data(filename, x_debug=False):
+    """
+        reads the data from the given filename. 
+        return the data as json structure. 
+
+        Example:
+        {
+            "AMPY_PORT": "COM1",
+            "AMPY_BAUD":       0.0,
+            "AMPY_DELAY": 115200.0,
+            "REMOTE_PATH": "/flash/",
+            "LOCAL_PATH": "./"
+        }
+    """
+    r_data = {}
+
+    if os.path.exists(filename):  
+        with open(filename) as file:
+            r_data = json.load(file)
+
+        if x_debug: 
+            pprint(r_data)
+    else:
+        pass # optional settings file ampy.json
+    
+    return r_data
+
+
 
 @click.group()
 @click.option(
     "--port",
     "-p",
     envvar="AMPY_PORT",
-    required=True,
+    required=False, #use json_config
     type=click.STRING,
     help="Name of serial port for connected board.  Can optionally specify with AMPY_PORT environment variable.",
     metavar="PORT",
@@ -83,8 +116,16 @@ def windows_full_port_name(portname):
     help="Delay in seconds before entering RAW MODE (default 0). Can optionally specify with AMPY_DELAY environment variable.",
     metavar="DELAY",
 )
+@click.option(
+    "--json",
+    "-j",
+    default="ampy.json",
+    type=click.Path(),
+    help="Configure the data from a json file.",
+    metavar="JSON_FILE",
+)
 @click.version_option()
-def cli(port, baud, delay):
+def cli(port, baud, delay, json):
     """ampy - Adafruit MicroPython Tool
 
     Ampy is a tool to control MicroPython boards over a serial connection.  Using
@@ -92,6 +133,31 @@ def cli(port, baud, delay):
     scripts.
     """
     global _board
+    global _local_path
+    global _remote_path
+
+    data = read_json_data(json, x_debug=True)
+    if port == None:
+        if 'AMPY_PORT' in data.keys():
+            port = data['AMPY_PORT']
+            del data['AMPY_PORT']
+    if 'AMPY_BAUD' in data.keys():
+        baud = data['AMPY_BAUD']
+        del data['AMPY_BAUD']
+    if 'AMPY_DELAY' in data.keys():
+        delay = data['AMPY_DELAY']
+        del data['AMPY_DELAY']
+
+    if 'LOCAL_PATH' in data.keys():
+        _local_path = data['LOCAL_PATH']
+        del data['LOCAL_PATH']
+    if 'REMOTE_PATH' in data.keys():
+        _remote_path = data['REMOTE_PATH'] 
+        del data['REMOTE_PATH']
+
+    for key in data.keys():
+        click.echo(f'>> unused key {key} in {json}') 
+
     # On Windows fix the COM port path name for ports above 9 (see comment in
     # windows_full_port_name function).
     if platform.system() == "Windows":

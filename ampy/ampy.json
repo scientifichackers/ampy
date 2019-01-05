@@ -1,0 +1,7 @@
+{
+    "AMPY_PORT": "COM1",
+    "AMPY_DELAY":     0.0,
+    "AMPY_BAUD": 115200,
+    "REMOTE_PATH": "/flash/",
+    "LOCAL_PATH": "./"
+}
