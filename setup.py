@@ -46,8 +46,8 @@ setup(
     url='https://github.com/adafruit/ampy',
 
     # Author details
-    author='Adafruit Industries',
-    author_email='circuitpython@adafruit.com',
+    author='Andreas Felix Haeberle (felix42eu)',
+    author_email='andreas.felix.haeberle@gmail.com',
 
     install_requires=['click', 'pyserial', 'python-dotenv'],
 
@@ -59,9 +59,6 @@ setup(
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.6',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
@@ -77,5 +74,8 @@ setup(
         'console_scripts': [
             'ampy=ampy.cli:cli',
         ],
+
     },
+    data_files = [('ampy.json', ['ampy/ampy.json'])], # new !
+    
 )
