@@ -118,3 +118,37 @@ AMPY_DELAY=0.5
 
 You can put the `.ampy` file in your working directory, one of its parents, or in
 your home directory.
+
+
+## Usage with a JSON-configuration file (ampy.json)
+
+Pyt a JSON-file in your project folder 
+```json
+{
+    "AMPY_PORT": "COM1",
+    "AMPY_DELAY":     0.0,
+    "AMPY_BAUD": 115200,
+    "REMOTE_PATH": "/flash/",
+    "LOCAL_PATH": "./"
+}
+```
+
+> NOTE: PORT will be overwritten if you set a -p/--port
+
+Now you may use ampy like this 
+
+
+Use the following the system on the command line to write a new file.
+```bash
+ampy get /flash/boot.py  # with implicit filename
+```
+
+Put a file with the command to put a file with an ampy.json in the calling directory
+```bash
+ampy put boot.py   
+```
+that is 
+```
+ampy put {{local_file_path}}  # implicit name and path with json
+```
+
