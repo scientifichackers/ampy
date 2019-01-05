@@ -188,11 +188,21 @@ def get(remote_file, local_file):
       ampy --port /board/serial/port get main.py main.py
     """
     # Get the file contents.
+    global _local_path
+    
     board_files = files.Files(_board)
     contents = board_files.get(remote_file)
     # Print the file out if no local file was provided, otherwise save it.
     if local_file is None:
-        print(contents.decode("utf-8"))
+        if len(_local_path) > 0:
+            l_info = os.path.split(remote_file)
+            filepath = os.path.join(_local_path,l_info[-1])
+
+            with open(filepath, 'wb') as file:
+                file.write(contents)
+                click.echo(f">> written {filepath} with {len(contents)} bytes")
+        else:
+            print(contents.decode("utf-8"))
     else:
         local_file.write(contents)
 
@@ -223,7 +233,7 @@ def mkdir(directory, exists_okay):
 
 
 @cli.command()
-@click.argument("directory", default="/")
+@click.argument("directory")
 @click.option(
     "--long_format",
     "-l",
@@ -255,8 +265,20 @@ def ls(directory, long_format, recursive):
 
       ampy --port /board/serial/port ls -l /foo/bar
     """
+    global _remote_path
     # List each file/directory on a separate line.
     board_files = files.Files(_board)
+
+    if len(_remote_path) > 0:
+        if directory != None and directory[0] == '/':
+            click.echo(f">> ignore {_remote_path} on absolute path {directory} ")
+        else:
+            directory = os.path.join(_remote_path,directory)
+            click.echo(f">> set directory {directory} ")
+    else:
+        directory = '/'
+        
+
     for f in board_files.ls(directory, long_format=long_format, recursive=recursive):
         print(f)
 
@@ -296,8 +318,16 @@ def put(local, remote):
       ampy --port /board/serial/port put adafruit_library /lib/adafruit_library
     """
     # Use the local filename if no remote filename is provided.
+    global _remote_path
+
     if remote is None:
-        remote = os.path.basename(os.path.abspath(local))
+        if len(_remote_path) > 0:
+            l_info = os.path.split(local)
+            remote = os.path.join(_remote_path,l_info[-1])
+
+            click.echo(f">> set remote {remote} ")
+        else:
+            remote = os.path.basename(os.path.abspath(local))
     # Check if path is a folder and do recursive copy of everything inside it.
     # Otherwise it's a file and should simply be copied over.
     if os.path.isdir(local):
