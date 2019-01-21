@@ -4,6 +4,9 @@
 
 ## If you wish to continue developing it on your own, please fork the repository.
 
+Check out other MicroPython tools like [rshell](https://github.com/dhylands/rshell)
+or [mpfshell](https://github.com/wendlers/mpfshell) for similar/more advanced interaction with boards.
+
 ------------------------------
 ## ampy
 
