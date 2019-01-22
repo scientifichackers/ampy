@@ -1,13 +1,3 @@
-# DEPRECATED
-
-## We are discontinuing support for ampy, and will no longer be maintaining it. We are leaving this repository available for continued use. If you would like to take over supporting it, please contact us on the [Adafruit Discord server](https://adafru.it/discord) and we can transfer the repository to you. 
-
-## If you wish to continue developing it on your own, please fork the repository.
-
-Check out other MicroPython tools like [rshell](https://github.com/dhylands/rshell)
-or [mpfshell](https://github.com/wendlers/mpfshell) for similar/more advanced interaction with boards.
-
-------------------------------
 ## ampy
 
 Adafruit MicroPython Tool (ampy) - Utility to interact with a CircuitPython or MicroPython board over a serial connection.
