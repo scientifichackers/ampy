@@ -11,7 +11,7 @@ deploy:
   on:
     tags: true
   password:
-    secure: ADwAFl15ux19XECYh5uHx2+peSMWZb6ieTxONvgwWRrCJwK1cFJQdAllkVGEj17IyhP8q/vswaGmh0o9QVeMy3TrFNeaSS97dq3Xi88NlPpcMpFwvTLXAkfrjdpq8lEfuLDUPHRKdYkZPXairXlZD+OWQSWSxQEryObUpZUtzTw8V3istkV2ohIfveT37YlH4yFd0Rg8MYlyDoRJrkLA/edZtwxLJI1CTqZ0YSG+WOWYb4WhUcA9ND68HmQ/AH6coCksi8WJOu29AE6vRIVLLps21hUnwde6y03ytXjWs5JcnzS1DO1YY8A2YM/VMeZ5xYikb84yKT8cHWVyV8M+lBZivnLN++T3Qa1r8QNsTDyZg+LgRESwUWTeyD6PsFTWZaE1VilGGp0Xn12xPBySPyDIbf/4sZNe0wIhRJKr+VnY5bO/nz0wHc5+zHEmSZz5puSU4fNuKCTEzq21eJCjB4HM+DhCpuq1CypXRDNKBEBPy3TQzOVux5bbJGWW2Pi3EW2zAyZyWfPEVvu5P0RBm3oA7oxx01FAE0Er9K9qCnkPlOQ9SNWMdmxH7buqMltMNgmC6u098YAf/6VMC+vG0Ett0bKFn3VZG02kyjWAFhYcqnDbIwDrVJItW0gbQfKbxkC36tGnL39VAtXJutO3LkpDUsFykawdkznjKLcVpFU=
+    secure: =add here=
   distributions: sdist bdist_wheel
 install:
 - pip install -r requirements.txt
