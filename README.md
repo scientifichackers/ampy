@@ -50,6 +50,7 @@ You should see usage information displayed like below:
     Options:
       -p, --port PORT  Name of serial port for connected board.  [required]
       -b, --baud BAUD  Baud rate for the serial connection. (default 115200)
+      -d, --delay DELAY Delay in seconds before entering RAW MODE (default 0)
       --help           Show this message and exit.
 
     Commands:
