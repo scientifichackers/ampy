@@ -20,39 +20,28 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from __future__ import print_function
+
+import atexit
 import os
 import platform
 import posixpath
-import re
+from textwrap import indent
+
+import dotenv
 import serial.serialutil
 
-import click
-import dotenv
-
+from ampy import util
+from ampy.colors import *
 # Load AMPY_PORT et al from .ampy file
 # Performed here because we need to beat click's decorators.
+from ampy.consts import SUPPORTED_REPL
+
 config = dotenv.find_dotenv(filename=".ampy", usecwd=True)
 if config:
     dotenv.load_dotenv(dotenv_path=config)
 
 import ampy.files as files
 import ampy.pyboard as pyboard
-
-
-_board = None
-
-
-def windows_full_port_name(portname):
-    # Helper function to generate proper Windows COM port paths.  Apparently
-    # Windows requires COM ports above 9 to have a special path, where ports below
-    # 9 are just referred to by COM1, COM2, etc. (wacky!)  See this post for
-    # more info and where this code came from:
-    # http://eli.thegreenplace.net/2009/07/31/listing-all-serial-ports-on-windows-with-python/
-    m = re.match("^COM(\d+)$", portname)
-    if m and int(m.group(1)) < 10:
-        return portname
-    else:
-        return "\\\\.\\{0}".format(portname)
 
 
 @click.group()
@@ -62,7 +51,8 @@ def windows_full_port_name(portname):
     envvar="AMPY_PORT",
     required=True,
     type=click.STRING,
-    help="Name of serial port for connected board.  Can optionally specify with AMPY_PORT environment variable.",
+    help="Name of serial port for connected board. "
+         "Can optionally specify with AMPY_PORT environment variable.",
     metavar="PORT",
 )
 @click.option(
@@ -71,7 +61,8 @@ def windows_full_port_name(portname):
     envvar="AMPY_BAUD",
     default=115200,
     type=click.INT,
-    help="Baud rate for the serial connection (default 115200).  Can optionally specify with AMPY_BAUD environment variable.",
+    help="Baud rate for the serial connection (default 115200). "
+         "Can optionally specify with AMPY_BAUD environment variable.",
     metavar="BAUD",
 )
 @click.option(
@@ -80,29 +71,42 @@ def windows_full_port_name(portname):
     envvar="AMPY_DELAY",
     default=0,
     type=click.FLOAT,
-    help="Delay in seconds before entering RAW MODE (default 0). Can optionally specify with AMPY_DELAY environment variable.",
+    help="Delay in seconds before entering RAW MODE (default 0). "
+         "Can optionally specify with AMPY_DELAY environment variable.",
     metavar="DELAY",
 )
 @click.version_option()
-def cli(port, baud, delay):
-    """ampy - Adafruit MicroPython Tool
+@click.pass_context
+def cli(ctx, port, baud, delay):
+    """
+    ampy - Adafruit MicroPython Tool
 
     Ampy is a tool to control MicroPython boards over a serial connection.  Using
     ampy you can manipulate files on the board's internal filesystem and even run
     scripts.
     """
-    global _board
     # On Windows fix the COM port path name for ports above 9 (see comment in
     # windows_full_port_name function).
     if platform.system() == "Windows":
-        port = windows_full_port_name(port)
-    _board = pyboard.Pyboard(port, baudrate=baud, rawdelay=delay)
+        port = util.windows_full_port_name(port)
+
+    board = pyboard.Pyboard(port, baudrate=baud, rawdelay=delay)
+    ctx.obj = board
+
+    # ensure cleanup on exit
+    @atexit.register
+    def close():
+        try:
+            board.close()
+        except Exception:
+            pass
 
 
 @cli.command()
 @click.argument("remote_file")
 @click.argument("local_file", type=click.File("wb"), required=False)
-def get(remote_file, local_file):
+@click.pass_context
+def get(ctx, remote_file, local_file):
     """
     Retrieve a file from the board.
 
@@ -122,7 +126,7 @@ def get(remote_file, local_file):
       ampy --port /board/serial/port get main.py main.py
     """
     # Get the file contents.
-    board_files = files.Files(_board)
+    board_files = files.Files(ctx.obj)
     contents = board_files.get(remote_file)
     # Print the file out if no local file was provided, otherwise save it.
     if local_file is None:
@@ -136,7 +140,8 @@ def get(remote_file, local_file):
     "--exists-okay", is_flag=True, help="Ignore if the directory already exists."
 )
 @click.argument("directory")
-def mkdir(directory, exists_okay):
+@click.pass_context
+def mkdir(ctx, directory, exists_okay):
     """
     Create a directory on the board.
 
@@ -151,8 +156,7 @@ def mkdir(directory, exists_okay):
 
       ampy --port /board/serial/port mkdir /code
     """
-    # Run the mkdir command.
-    board_files = files.Files(_board)
+    board_files = files.Files(ctx.obj)
     board_files.mkdir(directory, exists_okay=exists_okay)
 
 
@@ -162,7 +166,8 @@ def mkdir(directory, exists_okay):
     "--long_format",
     "-l",
     is_flag=True,
-    help="Print long format info including size of files.  Note the size of directories is not supported and will show 0 values.",
+    help="Print long format info including size of files.  "
+         "Note the size of directories is not supported and will show 0 values.",
 )
 @click.option(
     "--recursive",
@@ -170,7 +175,8 @@ def mkdir(directory, exists_okay):
     is_flag=True,
     help="recursively list all files and (empty) directories.",
 )
-def ls(directory, long_format, recursive):
+@click.pass_context
+def ls(ctx, directory, long_format, recursive):
     """List contents of a directory on the board.
 
     Can pass an optional argument which is the path to the directory.  The
@@ -190,7 +196,7 @@ def ls(directory, long_format, recursive):
       ampy --port /board/serial/port ls -l /foo/bar
     """
     # List each file/directory on a separate line.
-    board_files = files.Files(_board)
+    board_files = files.Files(ctx.obj)
     for f in board_files.ls(directory, long_format=long_format, recursive=recursive):
         print(f)
 
@@ -198,7 +204,8 @@ def ls(directory, long_format, recursive):
 @cli.command()
 @click.argument("local", type=click.Path(exists=True))
 @click.argument("remote", required=False)
-def put(local, remote):
+@click.pass_context
+def put(ctx, local, remote):
     """Put a file or folder and its contents on the board.
 
     Put will upload a local file or folder  to the board.  If the file already
@@ -237,7 +244,7 @@ def put(local, remote):
     if os.path.isdir(local):
         # Directory copy, create the directory and walk all children to copy
         # over the files.
-        board_files = files.Files(_board)
+        board_files = files.Files(ctx.obj)
         for parent, child_dirs, child_files in os.walk(local):
             # Create board filesystem absolute path to parent directory.
             remote_parent = posixpath.normpath(
@@ -259,13 +266,14 @@ def put(local, remote):
         # File copy, open the file and copy its contents to the board.
         # Put the file on the board.
         with open(local, "rb") as infile:
-            board_files = files.Files(_board)
+            board_files = files.Files(ctx.obj)
             board_files.put(remote, infile.read())
 
 
 @cli.command()
 @click.argument("remote_file")
-def rm(remote_file):
+@click.pass_context
+def rm(ctx, remote_file):
     """Remove a file from the board.
 
     Remove the specified file from the board's filesystem.  Must specify one
@@ -278,7 +286,7 @@ def rm(remote_file):
       ampy --port /board/serial/port rm main.py
     """
     # Delete the provided file/directory on the board.
-    board_files = files.Files(_board)
+    board_files = files.Files(ctx.obj)
     board_files.rm(remote_file)
 
 
@@ -287,7 +295,8 @@ def rm(remote_file):
     "--missing-okay", is_flag=True, help="Ignore if the directory does not exist."
 )
 @click.argument("remote_folder")
-def rmdir(remote_folder, missing_okay):
+@click.pass_context
+def rmdir(ctx, remote_folder, missing_okay):
     """Forcefully remove a folder and all its children from the board.
 
     Remove the specified folder from the board's filesystem.  Must specify one
@@ -300,7 +309,7 @@ def rmdir(remote_folder, missing_okay):
       ampy --port /board/serial/port rmdir adafruit_library
     """
     # Delete the provided file/directory on the board.
-    board_files = files.Files(_board)
+    board_files = files.Files(ctx.obj)
     board_files.rmdir(remote_folder, missing_okay=missing_okay)
 
 
@@ -310,9 +319,11 @@ def rmdir(remote_folder, missing_okay):
     "--no-output",
     "-n",
     is_flag=True,
-    help="Run the code without waiting for it to finish and print output.  Use this when running code with main loops that never return.",
+    help="Run the code without waiting for it to finish and print output. "
+         "Use this when running code with main loops that never return.",
 )
-def run(local_file, no_output):
+@click.pass_context
+def run(ctx, local_file, no_output):
     """Run a script and print its output.
 
     Run will send the specified file to the board and execute it immediately.
@@ -332,7 +343,7 @@ def run(local_file, no_output):
       ampy --port /board/serial/port run --no-output test.py
     """
     # Run the provided file and print its output.
-    board_files = files.Files(_board)
+    board_files = files.Files(ctx.obj)
     try:
         output = board_files.run(local_file, not no_output)
         if output is not None:
@@ -366,7 +377,8 @@ def run(local_file, no_output):
     flag_value="SAFE_MODE",
     help="Perform a safe-mode reboot.  User code will not be run and the filesystem will be writeable over USB",
 )
-def reset(mode):
+@click.pass_context
+def reset(ctx, mode):
     """Perform soft reset/reboot of the board.
 
     Will connect to the board and perform a reset.  Depending on the board
@@ -374,12 +386,12 @@ def reset(mode):
 
       ampy --port /board/serial/port reset
     """
-    _board.enter_raw_repl()
+    ctx.obj.enter_raw_repl()
     if mode == "SOFT":
-        _board.exit_raw_repl()
+        ctx.obj.exit_raw_repl()
         return
 
-    _board.exec_(
+    ctx.obj.exec_(
         """if 1:
         def on_next_reset(x):
             try:
@@ -400,30 +412,49 @@ def reset(mode):
             microcontroller.reset()
     """
     )
-    r = _board.eval("on_next_reset({})".format(repr(mode)))
+    r = ctx.obj.eval("on_next_reset({})".format(repr(mode)))
     print("here we are", repr(r))
     if r:
         click.echo(r, err=True)
         return
 
     try:
-        _board.exec_("reset()")
+        ctx.obj.exec_("reset()")
     except serial.serialutil.SerialException as e:
         # An error is expected to occur, as the board should disconnect from
         # serial when restarted via microcontroller.reset()
         pass
 
 
-if __name__ == "__main__":
-    try:
-        cli()
-    finally:
-        # Try to ensure the board serial connection is always gracefully closed.
-        if _board is not None:
+@cli.command()
+@click.option(
+    "--terminal",
+    "-t",
+    help="The name of the terminal emulator program to use.",
+    envvar="AMPY_TERMINAL",
+)
+@click.pass_context
+def repl(ctx, terminal):
+    board = ctx.obj
+    if terminal is None:
+        if board.is_telnet:
+            return util.invoke_repl(board, "telet", util.find("telnet"))
+        for name in SUPPORTED_REPL:
             try:
-                _board.close()
-            except:
-                # Swallow errors when attempting to close as it's just a best effort
-                # and shouldn't cause a new error or problem if the connection can't
-                # be closed.
-                pass
+                path = util.find(name)
+            except FileNotFoundError:
+                continue
+            return util.invoke_repl(board, name, path)
+    elif terminal in SUPPORTED_REPL:
+        if board.is_telnet and terminal != "telnet":
+            print(red(f"The port you provided (`{board.device}`) looks like an IP address."
+                      f"You must use the `telnet` terminal to open this device, not `{terminal}`", bold=True))
+        util.invoke_repl(board, terminal, util.find(terminal))
+
+    print(bold(red("Couldn't find a suitable terminal emulator program to launch!")))
+    print("\nampy can invoke one of the following terminal programs:")
+    print(indent("\n".join(SUPPORTED_REPL), " " * 2 + "- "))
+    print(
+        "\nIf you want your favourite terminal program added to this list,\n"
+        "please raise an issue @ http://github.com/pycampers/ampy"
+    )

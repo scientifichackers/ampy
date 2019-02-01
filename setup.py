@@ -19,7 +19,7 @@ URL = "https://github.com/pycampers/ampy"
 EMAIL = "devxpy@gmail.com"
 AUTHOR = "Dev Aggarwal"
 REQUIRES_PYTHON = ">=3.6.0"
-VERSION = None
+VERSION = "1.0.7"
 
 # What packages are required for this module to be executed?
 REQUIRED = ["click", "pyserial", "python-dotenv"]
@@ -115,13 +115,9 @@ setup(
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python :: 2",
-        "Programming Language :: Python :: 2.6",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.3",
-        "Programming Language :: Python :: 3.4",
-        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
     ],
     keywords="adafruit ampy hardware micropython circuitpython",
     # $ setup.py publish support.
