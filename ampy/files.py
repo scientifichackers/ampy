@@ -73,9 +73,12 @@ class Files(object):
         except PyboardError as ex:
             # Check if this is an OSError #2, i.e. file doesn't exist and
             # rethrow it as something more descriptive.
-            if ex.args[2].decode("utf-8").find("OSError: [Errno 2] ENOENT") != -1:
-                raise RuntimeError("No such file: {0}".format(filename))
-            else:
+            try:
+                if ex.args[2].decode("utf-8").find("OSError: [Errno 2] ENOENT") != -1:
+                    raise RuntimeError("No such file: {0}".format(filename))
+                else:
+                    raise ex
+            except UnicodeDecodeError:
                 raise ex
         self._pyboard.exit_raw_repl()
         return out
