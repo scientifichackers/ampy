@@ -1,1 +1,1 @@
-SUPPORTED_REPL = ["picocom", "screen", "telnet"]
+SUPPORTED_REPL = {"picocom", "screen", "telnet"}

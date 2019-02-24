@@ -448,8 +448,8 @@ def repl(ctx, terminal):
     board = ctx.obj
     if terminal is None:
         if board.is_telnet:
-            return util.invoke_repl(board, "telet", util.find("telnet"))
-        for name in SUPPORTED_REPL:
+            return util.invoke_repl(board, "telnet", util.find("telnet"))
+        for name in SUPPORTED_REPL - {"telnet"}:
             try:
                 path = util.find(name)
             except FileNotFoundError:
