@@ -19,8 +19,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import print_function
-
 import atexit
 import os
 import platform
@@ -32,6 +30,7 @@ import serial.serialutil
 
 from ampy import util
 from ampy.colors import *
+
 # Load AMPY_PORT et al from .ampy file
 # Performed here because we need to beat click's decorators.
 from ampy.consts import SUPPORTED_REPL
@@ -52,17 +51,17 @@ import ampy.pyboard as pyboard
     required=True,
     type=click.STRING,
     help="Name of serial port for connected board. "
-         "Can optionally specify with AMPY_PORT environment variable.",
+    "Can optionally specify with AMPY_PORT environment variable.",
     metavar="PORT",
 )
 @click.option(
     "--baud",
     "-b",
     envvar="AMPY_BAUD",
-    default=115200,
+    default=115_200,
     type=click.INT,
     help="Baud rate for the serial connection (default 115200). "
-         "Can optionally specify with AMPY_BAUD environment variable.",
+    "Can optionally specify with AMPY_BAUD environment variable.",
     metavar="BAUD",
 )
 @click.option(
@@ -72,7 +71,7 @@ import ampy.pyboard as pyboard
     default=0,
     type=click.FLOAT,
     help="Delay in seconds before entering RAW MODE (default 0). "
-         "Can optionally specify with AMPY_DELAY environment variable.",
+    "Can optionally specify with AMPY_DELAY environment variable.",
     metavar="DELAY",
 )
 @click.version_option()
@@ -167,7 +166,7 @@ def mkdir(ctx, directory, exists_okay):
     "-l",
     is_flag=True,
     help="Print long format info including size of files.  "
-         "Note the size of directories is not supported and will show 0 values.",
+    "Note the size of directories is not supported and will show 0 values.",
 )
 @click.option(
     "--recursive",
@@ -197,8 +196,19 @@ def ls(ctx, directory, long_format, recursive):
     """
     # List each file/directory on a separate line.
     board_files = files.Files(ctx.obj)
-    for f in board_files.ls(directory, long_format=long_format, recursive=recursive):
-        print(f)
+    result = board_files.ls(directory, long_format=long_format, recursive=recursive)
+
+    if not long_format:
+        print("\n".join(result))
+        return
+
+    path_size = max([len(i[0]) for i in result])
+
+    print("Path".ljust(path_size), "Bytes")
+    print("-" * (path_size + len("Bytes") + 1))
+
+    for i in result:
+        print(i[0].ljust(path_size), i[1])
 
 
 @cli.command()
@@ -320,7 +330,7 @@ def rmdir(ctx, remote_folder, missing_okay):
     "-n",
     is_flag=True,
     help="Run the code without waiting for it to finish and print output. "
-         "Use this when running code with main loops that never return.",
+    "Use this when running code with main loops that never return.",
 )
 @click.pass_context
 def run(ctx, local_file, no_output):
@@ -447,8 +457,13 @@ def repl(ctx, terminal):
             return util.invoke_repl(board, name, path)
     elif terminal in SUPPORTED_REPL:
         if board.is_telnet and terminal != "telnet":
-            print(red(f"The port you provided (`{board.device}`) looks like an IP address."
-                      f"You must use the `telnet` terminal to open this device, not `{terminal}`", bold=True))
+            print(
+                red(
+                    f"The port you provided (`{board.device}`) looks like an IP address."
+                    f"You must use the `telnet` terminal to open this device, not `{terminal}`",
+                    bold=True,
+                )
+            )
         util.invoke_repl(board, terminal, util.find(terminal))
 
     print(bold(red("Couldn't find a suitable terminal emulator program to launch!")))
@@ -458,3 +473,27 @@ def repl(ctx, terminal):
         "\nIf you want your favourite terminal program added to this list,\n"
         "please raise an issue @ http://github.com/pycampers/ampy"
     )
+
+
+@cli.command()
+@click.pass_context
+@click.argument("source", nargs=-1, required=True)
+@click.argument("dest")
+@click.option(
+    "--target-directory",
+    "-t",
+    help="Treat DEST as a target directory, irregardless of the number of SOURCE(s).",
+)
+def mv(ctx, source, dest, target_directory):
+    """
+    Rename SOURCE to DEST, or move SOURCE(s) to DEST directory.
+
+    if exactly 1 SOURCE is provided, then the SOURCE will be renamed to DEST.
+    else all SOURCEs will be moved to the DEST directory.
+
+    In the latter case, if the DEST directory doesn't exist, it will be created.
+    """
+    board_files = files.Files(ctx.obj)
+    result = board_files.mv(source, dest, target_directory)
+
+    print(result)

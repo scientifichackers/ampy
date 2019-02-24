@@ -19,7 +19,7 @@ URL = "https://github.com/pycampers/ampy"
 EMAIL = "devxpy@gmail.com"
 AUTHOR = "Dev Aggarwal"
 REQUIRES_PYTHON = ">=3.6.0"
-VERSION = "1.0.7"
+VERSION = "1.1.0.dev1"
 
 # What packages are required for this module to be executed?
 REQUIRED = ["click", "pyserial", "python-dotenv"]

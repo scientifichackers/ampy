@@ -149,34 +149,34 @@ class Pyboard:
         )
         self.baudrate = baudrate
 
+        # device looks like an IP address
         if self.is_telnet:
-            # device looks like an IP address
             self.serial = TelnetToSerial(device, user, password, read_timeout=10)
-        else:
-            import serial
+            return
 
-            delayed = False
-            for attempt in range(wait + 1):
-                try:
-                    self.serial = serial.Serial(
-                        device, baudrate=baudrate, interCharTimeout=1
-                    )
-                    break
-                except (OSError, IOError):  # Py2 and Py3 have different errors
-                    if wait == 0:
-                        continue
-                    if attempt == 0:
-                        sys.stdout.write("Waiting {} seconds for pyboard ".format(wait))
-                        delayed = True
-                time.sleep(1)
-                sys.stdout.write(".")
-                sys.stdout.flush()
+        import serial
+
+        delayed = False
+        for attempt in range(wait + 1):
+            try:
+                self.serial = serial.Serial(device, baudrate=baudrate, timeout=1)
+            except (OSError, IOError):  # Py2 and Py3 have different errors
+                if wait == 0:
+                    continue
+                if attempt == 0:
+                    sys.stdout.write("Waiting {} seconds for pyboard ".format(wait))
+                    delayed = True
             else:
-                if delayed:
-                    print("")
-                raise PyboardError("failed to access " + device)
+                break
+            time.sleep(1)
+            sys.stdout.write(".")
+            sys.stdout.flush()
+        else:
             if delayed:
                 print("")
+            raise PyboardError("failed to access " + device)
+        if delayed:
+            print("")
 
     def close(self):
         self.serial.close()
@@ -216,7 +216,8 @@ class Pyboard:
             n = self.serial.inWaiting()
 
         self.serial.write(b"\r\x01")  # ctrl-A: enter raw REPL
-        data = self.read_until(1, b"raw REPL; CTRL-B to exit\r\n>")
+        data = self.read_until(1, b"raw REPL; CTRL-B to exit\r\n>", timeout=1)
+
         if not data.endswith(b"raw REPL; CTRL-B to exit\r\n>"):
             print(data)
             raise PyboardError("could not enter raw repl")

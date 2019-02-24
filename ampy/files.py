@@ -20,12 +20,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import ast
-import textwrap
+from textwrap import dedent
+from typing import Sequence
 
 from ampy.pyboard import PyboardError
 
-
 BUFFER_SIZE = 32  # Amount of data to read or write to the serial port at a time.
+
+
 # This is kept small because small chips and USB to serial
 # bridges usually have very small buffers.
 
@@ -69,12 +71,12 @@ class Files(object):
         )
         self._pyboard.enter_raw_repl()
         try:
-            out = self._pyboard.exec_(textwrap.dedent(command))
+            out = self._pyboard.exec_(dedent(command))
         except PyboardError as ex:
             # Check if this is an OSError #2, i.e. file doesn't exist and
             # rethrow it as something more descriptive.
             if ex.args[2].decode("utf-8").find("OSError: [Errno 2] ENOENT") != -1:
-                raise RuntimeError("No such file: {0}".format(filename))
+                raise FileNotFoundError("No such file: {0}".format(filename))
             else:
                 raise ex
         self._pyboard.exit_raw_repl()
@@ -98,78 +100,94 @@ class Files(object):
         if not directory.startswith("/"):
             directory = "/" + directory
 
-        command = """\
+        command = f"""\
                 try:        
                     import os
                 except ImportError:
-                    import uos as os\n"""
+                    import uos as os
+                directory = {directory!r}\n"""
 
         if recursive:
             command += """\
                 def listdir(directory):
                     result = set()
 
-                    def _listdir(dir_or_file):
+                    def _(path):
                         try:
                             # if its a directory, then it should provide some children.
-                            children = os.listdir(dir_or_file)
+                            children = os.listdir(path)
                         except OSError:                        
                             # probably a file. run stat() to confirm.
-                            os.stat(dir_or_file)
-                            result.add(dir_or_file) 
-                        else:
+                            os.stat(path)
+                            result.add(path) 
+                        else:                            
                             # probably a directory, add to result if empty.
-                            if children:
-                                # queue the children to be dealt with in next iteration.
-                                for child in children:
-                                    # create the full path.
-                                    if dir_or_file == '/':
-                                        next = dir_or_file + child
-                                    else:
-                                        next = dir_or_file + '/' + child
-                                    
-                                    _listdir(next)
-                            else:
-                                result.add(dir_or_file)                     
+                            if not children:
+                                if not path.endswith("/"):                                
+                                    path += "/"                        
+                                result.add(path)
+                                return                                    
+                            
+                            # queue the children to be dealt with in next iteration.
+                            for child in children:
+                                # create the full path.
+                                if path.endswith("/"):
+                                    next = path + child
+                                else:
+                                    next = path + "/" + child                                
+                                
+                                _(next)                                                     
 
-                    _listdir(directory)
+                    _(directory)
                     return sorted(result)\n"""
         else:
             command += """\
-                def listdir(directory):
-                    if directory == '/':                
-                        return sorted([directory + f for f in os.listdir(directory)])
+                def get_qualified_path(path):
+                    try:
+                        os.listdir(path)                            
+                    except OSError:
+                        pass
                     else:
-                        return sorted([directory + '/' + f for f in os.listdir(directory)])\n"""
+                        path += "/"
 
-        # Execute os.listdir() command on the board.
+                    if directory.endswith("/"):                            
+                        path = directory + path
+                    else:
+                        path = directory + "/" + path
+
+                    return path
+                    
+                def listdir(directory):
+                    return sorted([get_qualified_path(i) for i in os.listdir(directory)])\n"""
+
         if long_format:
-            command += """
-                r = []
-                for f in listdir('{0}'):
-                    size = os.stat(f)[6]                    
-                    r.append('{{0}} - {{1}} bytes'.format(f, size))
-                print(r)
-            """.format(
-                directory
-            )
+            command += """\
+                result = []
+                for path in listdir(directory):
+                    size = 0
+                    if path.endswith("/"):
+                        for file in os.listdir(path[:-1]):                                
+                            size += os.stat(path + file)[6]
+                    else:
+                        size += os.stat(path)[6]
+                    result.append((path, size))
+                print(result)\n"""
         else:
-            command += """
-                print(listdir('{0}'))
-            """.format(
-                directory
-            )
+            command += """\
+                print(listdir(directory))\n"""
+
         self._pyboard.enter_raw_repl()
         try:
-            out = self._pyboard.exec_(textwrap.dedent(command))
+            out = self._pyboard.exec_(dedent(command))
         except PyboardError as ex:
             # Check if this is an OSError #2, i.e. directory doesn't exist and
             # rethrow it as something more descriptive.
             if ex.args[2].decode("utf-8").find("OSError: [Errno 2] ENOENT") != -1:
-                raise RuntimeError("No such directory: {0}".format(directory))
+                raise FileNotFoundError("No such directory: {0}".format(directory))
             else:
                 raise ex
         self._pyboard.exit_raw_repl()
+
         # Parse the result list and return it.
         return ast.literal_eval(out.decode("utf-8"))
 
@@ -189,7 +207,7 @@ class Files(object):
         )
         self._pyboard.enter_raw_repl()
         try:
-            out = self._pyboard.exec_(textwrap.dedent(command))
+            out = self._pyboard.exec_(dedent(command))
         except PyboardError as ex:
             # Check if this is an OSError #17, i.e. directory already exists.
             if ex.args[2].decode("utf-8").find("OSError: [Errno 17] EEXIST") != -1:
@@ -211,7 +229,7 @@ class Files(object):
         # Loop through and write a buffer size chunk of data at a time.
         for i in range(0, size, BUFFER_SIZE):
             chunk_size = min(BUFFER_SIZE, size - i)
-            chunk = repr(data[i : i + chunk_size])
+            chunk = repr(data[i: i + chunk_size])
             # Make sure to send explicit byte strings (handles python 2 compatibility).
             if not chunk.startswith("b"):
                 chunk = "b" + chunk
@@ -232,13 +250,13 @@ class Files(object):
         )
         self._pyboard.enter_raw_repl()
         try:
-            out = self._pyboard.exec_(textwrap.dedent(command))
+            out = self._pyboard.exec_(dedent(command))
         except PyboardError as ex:
             message = ex.args[2].decode("utf-8")
             # Check if this is an OSError #2, i.e. file/directory doesn't exist
             # and rethrow it as something more descriptive.
             if message.find("OSError: [Errno 2] ENOENT") != -1:
-                raise RuntimeError("No such file/directory: {0}".format(filename))
+                raise FileNotFoundError("No such file/directory: {0}".format(filename))
             # Check for OSError #13, the directory isn't empty.
             if message.find("OSError: [Errno 13] EACCES") != -1:
                 raise RuntimeError("Directory is not empty: {0}".format(filename))
@@ -279,32 +297,106 @@ class Files(object):
         )
         self._pyboard.enter_raw_repl()
         try:
-            out = self._pyboard.exec_(textwrap.dedent(command))
+            out = self._pyboard.exec_(dedent(command))
         except PyboardError as ex:
             message = ex.args[2].decode("utf-8")
             # Check if this is an OSError #2, i.e. directory doesn't exist
             # and rethrow it as something more descriptive.
             if message.find("OSError: [Errno 2] ENOENT") != -1:
                 if not missing_okay:
-                    raise RuntimeError("No such directory: {0}".format(directory))
+                    raise FileNotFoundError("No such directory: {0}".format(directory))
             else:
                 raise ex
         self._pyboard.exit_raw_repl()
 
-    def run(self, filename, wait_output=True):
-        """Run the provided script and return its output.  If wait_output is True
-        (default) then wait for the script to finish and then print its output,
-        otherwise just run the script and don't wait for any output.
-        """
-        self._pyboard.enter_raw_repl()
-        out = None
-        if wait_output:
-            # Run the file and wait for output to return.
-            out = self._pyboard.execfile(filename)
+    def mv(self, sources: Sequence[str], dest: str, target_directory: bool):
+        # do some cleanup of input
+        dest = dest[:-1] if dest.endswith("/") else dest
+        sources = [src[1:] if src.startswith("/") else src for src in sources]
+
+        command = dedent(
+            f"""
+            try:
+                import os
+            except ImportError:
+                import uos as os
+            import sys
+            
+            sources = {sources!r}
+            dest = {dest!r}
+            
+            for src in sources:
+                try:
+                    os.stat(src)
+                except OSError:
+                    print("FileNotFoundError:" + src)
+                    sys.exit()
+            """
+        )
+
+        if not target_directory and len(sources) == 1:
+            command += dedent(
+                """
+                os.rename(sources[0], dest)                                                              
+                """
+            )
         else:
-            # Read the file and run it using lower level pyboard functions that
-            # won't wait for it to finish or return output.
-            with open(filename, "rb") as infile:
-                self._pyboard.exec_raw_no_follow(infile.read())
-        self._pyboard.exit_raw_repl()
-        return out
+            from pathlib import Path
+
+            dest = Path(dest)
+            dest_paths = [str(dest / Path(i).relative_to(dest)) for i in sources]
+
+            command += dedent(
+                f"""                            
+                try:
+                    os.stat(dest)
+                except OSError:
+                    os.mkdir(dest)
+                else:                                
+                    try:
+                        os.listdir(dest)
+                    except OSError:
+                        print("NotADirectoryError")
+                        sys.exit()
+    
+                for src, dest_path in zip(sources, {dest_paths!r}):
+                    os.rename(src, dest_path)
+                """
+            )
+
+        print(command)
+
+        self._pyboard.enter_raw_repl()
+        out: str = self._pyboard.exec_(command).decode().strip()
+
+        if not out:
+            self._pyboard.exit_raw_repl()
+            return
+
+        if out.find("FileNotFoundError") != -1:
+            fname = out.split(":")[-1].strip()
+            raise FileNotFoundError(f"No such file or directory: {fname!r}")
+
+        if out.find("NotADirectoryError") != -1:
+            raise NotADirectoryError(f"{dest!r} is not a directory.")
+
+        raise RuntimeError("Unexpected output: {out!r}")
+
+
+def run(self, filename, wait_output=True):
+    """Run the provided script and return its output.  If wait_output is True
+    (default) then wait for the script to finish and then print its output,
+    otherwise just run the script and don't wait for any output.
+    """
+    self._pyboard.enter_raw_repl()
+    out = None
+    if wait_output:
+        # Run the file and wait for output to return.
+        out = self._pyboard.execfile(filename)
+    else:
+        # Read the file and run it using lower level pyboard functions that
+        # won't wait for it to finish or return output.
+        with open(filename, "rb") as infile:
+            self._pyboard.exec_raw_no_follow(infile.read())
+    self._pyboard.exit_raw_repl()
+    return out
