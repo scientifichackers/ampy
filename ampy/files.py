@@ -21,6 +21,7 @@
 # SOFTWARE.
 import ast
 import textwrap
+import binascii
 
 from ampy.pyboard import PyboardError
 
@@ -58,12 +59,13 @@ class Files(object):
         # expects string data.
         command = """
             import sys
+            import ubinascii
             with open('{0}', 'rb') as infile:
                 while True:
                     result = infile.read({1})
                     if result == b'':
                         break
-                    len = sys.stdout.write(result)
+                    len = sys.stdout.write(ubinascii.hexlify(result))
         """.format(
             filename, BUFFER_SIZE
         )
@@ -81,7 +83,7 @@ class Files(object):
             except UnicodeDecodeError:
                 raise ex
         self._pyboard.exit_raw_repl()
-        return out
+        return binascii.unhexlify(out)
 
     def ls(self, directory="/", long_format=True, recursive=False):
         """List the contents of the specified directory (or root if none is
