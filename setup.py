@@ -12,22 +12,21 @@ from shutil import rmtree
 from setuptools import find_packages, setup, Command
 
 # Package meta-data.
-NAME = "adafruit-ampy"
-DESCRIPTION = "ampy (Adafruit MicroPython tool) is a command line tool to interact with a CircuitPython or " \
-              "MicroPython board over a serial connection. "
+NAME = "ampy2"
+DESCRIPTION = (
+    "ampy is a CLI tool to communicate with MicroPython boards over a WiFi connection."
+)
 URL = "https://github.com/pycampers/ampy"
-EMAIL = "devxpy@gmail.com"
+EMAIL = "work@almightydev.com"
 AUTHOR = "Dev Aggarwal"
-REQUIRES_PYTHON = ">=3.6.0"
+REQUIRES_PYTHON = ">=3.7"
 VERSION = "1.1.0.dev1"
 
 # What packages are required for this module to be executed?
-REQUIRED = ["click", "pyserial", "python-dotenv"]
+REQUIRED = ["click", "pyserial", "esptool",  "python-decouple"]
 
 # What packages are optional?
-EXTRAS = {
-    # 'fancy feature': ['django'],
-}
+EXTRAS = {"dev": ["twine"]}
 
 # The rest you shouldn't have to touch too much :)
 # ------------------------------------------------
