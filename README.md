@@ -6,7 +6,7 @@ An experimental flavour of the original micropython tool from adafruit.
 
 This project aims to rectify the inherent problems that `ampy` and the underlying `pyboard.py` face, due to lack of a _proper_ automate-able interface in micropython itself.
 
-These tools end up simulating a human on the REPL, which is not very ideal. (See - https://github.com/pycampers/ampy/issues/64)
+These tools end up simulating a human on the REPL, which is not very ideal. (See - [#64](https://github.com/pycampers/ampy/issues/64))
 
 ### Ideas
 
