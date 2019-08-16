@@ -11,7 +11,8 @@ These tools end up simulating a human on the REPL, which is not very ideal. (See
 ### Ideas
 
 - [ ] Easy building and flashing frozen micropython firmware. 
-	- Initial work being done [here](https://github.com/micropython/micropython/pull/5003).
+    - [Dockerfile](https://github.com/micropython/micropython/pull/5003)
+	- [firmware_builder.py](https://github.com/pycampers/ampy/blob/ampy2/ampy/firmware_builder.py)
 - [ ] RPC interface that works transparently over both serial and WiFi.
 - [ ] Faster development cycles, similar to flutter's hot restart.
 - [ ] Collaborative environment hat allows N developers to work on M devices at the same time.

@@ -5,8 +5,8 @@ from decouple import config
 from esptool import ESPLoader
 
 BAUD = config("AMPY_BAUD", ESPLoader.ESP_ROM_BAUD, cast=int)
-TMPDIR = Path(gettempdir()) / "ampy"
+TMP_DIR = Path(gettempdir()) / "ampy"
 try:
-    TMPDIR.mkdir()
+    TMP_DIR.mkdir()
 except FileExistsError:
     pass

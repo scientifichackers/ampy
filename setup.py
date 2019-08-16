@@ -20,7 +20,7 @@ URL = "https://github.com/pycampers/ampy"
 EMAIL = "work@almightydev.com"
 AUTHOR = "Dev Aggarwal"
 REQUIRES_PYTHON = ">=3.7"
-VERSION = "1.1.0.dev1"
+VERSION = "2.0.0.dev"
 
 # What packages are required for this module to be executed?
 REQUIRED = ["click", "pyserial", "esptool",  "python-decouple"]

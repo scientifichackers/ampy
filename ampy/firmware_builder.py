@@ -8,13 +8,13 @@ from typing import Iterable
 from pkg_resources import EntryPoint
 
 from ampy import board_finder
-from ampy.settings import TMPDIR
+from ampy.settings import TMP_DIR
 from ampy.util import call
 
-home = "/home/docker"
-esp_init_data = f"{home}/esp-open-sdk/sdk/bin/esp_init_data_default.bin"
-mp_dir = f"{home}/micropython"
-docker_img = "pycampers/micropython:prebuilt"
+HOME = "/home/docker"
+ESP_INIT_DATA = f"{HOME}/esp-open-sdk/sdk/bin/esp_init_data_default.bin"
+MP_DIR = f"{HOME}/micropython"
+DOCKER_IMG = "pycampers/micropython:prebuilt"
 
 
 @dataclass
@@ -24,7 +24,7 @@ class Port:
 
 
 def generate_main_py(entrypoints: Iterable[EntryPoint]):
-    outfile = TMPDIR / f"{secrets.token_urlsafe(8)}-main.py"
+    outfile = TMP_DIR / f"{secrets.token_urlsafe(8)}-main.py"
     with open(outfile, "w") as f:
         for ep in entrypoints:
             f.write(f"import {ep.module_name}\n{ep.module_name}.{ep.attrs[0]}()")
@@ -33,14 +33,14 @@ def generate_main_py(entrypoints: Iterable[EntryPoint]):
 
 def main(port: Port, main_py: Path, code: Path, *, extra_files=None):
     outfile = (
-        TMPDIR
-        / f"{'esp8266'} {datetime.now().strftime('%d-%m-%Y_%I-%M-%S_%p')} firmware-combined.bin"
+            TMP_DIR
+            / f"{'esp8266'} {datetime.now().strftime('%d-%m-%Y_%I-%M-%S_%p')} firmware-combined.bin"
     )
     if extra_files is None:
         extra_files = {}
 
     container = f"ampy-builder--{secrets.token_urlsafe(8)}"
-    port_dir = f"{mp_dir}/ports/{port.name}"
+    port_dir = f"{MP_DIR}/ports/{port.name}"
 
     # start a container
     call(
@@ -49,7 +49,7 @@ def main(port: Port, main_py: Path, code: Path, *, extra_files=None):
         "-td",  # keeps container running in background
         f"-w={port_dir}",
         f"--name={container}",
-        docker_img,
+        DOCKER_IMG,
     )
 
     try:
@@ -82,7 +82,7 @@ if __name__ == "__main__":
         Port("esp8266", "build"),
         generate_main_py([EntryPoint.parse("x=hello:main")]),
         Path(__file__).parent / "hello.py",
-        extra_files={esp_init_data: Path.cwd()},
+        extra_files={ESP_INIT_DATA: Path.cwd()},
     )
 
     call("esptool.py", f"--port={board.port}", "erase_flash")
