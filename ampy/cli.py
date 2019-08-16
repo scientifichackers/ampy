@@ -246,14 +246,15 @@ def put(local, remote):
             try:
                 # Create remote parent directory.
                 board_files.mkdir(remote_parent)
-                # Loop through all the files and put them on the board too.
-                for filename in child_files:
-                    with open(os.path.join(parent, filename), "rb") as infile:
-                        remote_filename = posixpath.join(remote_parent, filename)
-                        board_files.put(remote_filename, infile.read())
             except files.DirectoryExistsError:
                 # Ignore errors for directories that already exist.
                 pass
+            # Loop through all the files and put them on the board too.
+            for filename in child_files:
+                with open(os.path.join(parent, filename), "rb") as infile:
+                    remote_filename = posixpath.join(remote_parent, filename)
+                    board_files.put(remote_filename, infile.read())
+
 
     else:
         # File copy, open the file and copy its contents to the board.
