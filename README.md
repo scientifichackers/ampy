@@ -17,5 +17,6 @@ These tools end up simulating a human on the REPL, which is not very ideal. (See
 - [ ] Faster development cycles, similar to flutter's hot restart.
 - [ ] Collaborative environment hat allows N developers to work on M devices at the same time.
 - [ ] Automate-able API that other toolchains and GUIs can exploit.
+- [ ] A plugin system that allows 3rd parties to extend ampy's functionality. (Like [cargo plugins](https://lib.rs/development-tools/cargo-plugins))
 - [ ] Install-able without a Python environment, by building distributable EXEs.
 
