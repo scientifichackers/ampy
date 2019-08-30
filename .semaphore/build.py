@@ -9,7 +9,7 @@ import requests
 import yaml
 
 from ampy.settings import DOCKER_IMAGE
-from ampy.util import call
+from ampy.util import call, shell
 
 GITHUB_API = "https://api.github.com"
 MPY_RELEASES_URL = f"{GITHUB_API}/repos/micropython/micropython/releases"
@@ -71,9 +71,7 @@ def test_docker_image(image: str, mpy_dir: Path, build_job: dict):
 
 
 def shell_in_docker(image: str, mpy_dir: Path, cmd: str):
-    call(
-        "docker", "run", f"-v={mpy_dir}:{DOCKER_HOME}", f"-w={DOCKER_HOME}", image, cmd
-    )
+    shell(f"docker run -v {mpy_dir}:{DOCKER_HOME} -w {DOCKER_HOME} {image} {cmd}")
 
 
 def build_docker_image(dockerfile: Path, mpy_dir: Path, release: MpyRelease) -> str:
