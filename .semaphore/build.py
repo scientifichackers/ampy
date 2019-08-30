@@ -92,11 +92,10 @@ def gen_dockerfile(build_job: dict) -> Path:
         f.write("WORKDIR $HOME\n")
         f.write("RUN apt-get update\n")
 
+        f.write("RUN apt-get install -y wget git\n")
+
         if PORT_NAME == "esp32":
-            f.write("RUN apt-get install -y wget git\n")
             f.write("COPY ports/esp32/Makefile ports/esp32/Makefile\n")
-        elif PORT_NAME == "esp8266":
-            f.write("RUN apt-get install -y wget zcat git\n")
 
         for line in build_job["install"]:
             line = line.replace("sudo", "")
