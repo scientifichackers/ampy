@@ -21,4 +21,5 @@ blocks:
           - mkdir .pip_cache
           - cache restore
           - pip install --user --cache-dir .pip_cache -e .[ci]
+          - python .semaphore/build.py
           - cache store
