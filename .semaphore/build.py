@@ -13,8 +13,8 @@ from ampy.util import call
 
 GITHUB_API = "https://api.github.com"
 MPY_RELEASES_URL = f"{GITHUB_API}/repos/micropython/micropython/releases"
-# PORT_NAME = os.environ["MPY_PORT"]
-PORT_NAME = "esp32"
+PORT_NAME = os.environ["MPY_PORT"]
+# PORT_NAME = "esp32"
 DOCKER_HOME = "/root"
 
 
@@ -91,7 +91,12 @@ def gen_dockerfile(build_job: dict) -> Path:
         f.write(f"ENV DEBIAN_FRONTEND noninteractive\n")
         f.write("WORKDIR $HOME\n")
         f.write("RUN apt-get update\n")
-        f.write("RUN apt-get install -y wget git\n")
+
+        if PORT_NAME == "esp32":
+            f.write("RUN apt-get install -y wget git\n")
+            f.write("COPY ports/esp32/Makefile ports/esp32/Makefile\n")
+        elif PORT_NAME == "esp8266":
+            f.write("RUN apt-get install -y wget zcat git\n")
 
         for line in build_job["install"]:
             line = line.replace("sudo", "")
