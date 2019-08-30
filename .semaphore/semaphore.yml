@@ -20,6 +20,7 @@ blocks:
           - checkout
           - mkdir .pip_cache
           - cache restore
+          - sem-version python 3.7
           - pip install --user --cache-dir .pip_cache -e .[ci]
           - python .semaphore/build.py
           - cache store
