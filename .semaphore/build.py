@@ -62,6 +62,7 @@ def docker_push(image: str):
 
 
 def test_docker_image(image: str, mpy_dir: Path, build_job: dict):
+    call("git", "init", cwd=mpy_dir)
     try:
         for line in build_job["script"]:
             shell_in_docker(image, mpy_dir, line)
