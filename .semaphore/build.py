@@ -91,7 +91,7 @@ def gen_dockerfile(build_job: dict) -> Path:
         f.write(f"ENV DEBIAN_FRONTEND noninteractive\n")
         f.write("WORKDIR $HOME\n")
         f.write("RUN apt-get update\n")
-        f.write("RUN apt-get install -y wget\n")
+        f.write("RUN apt-get install -y wget git\n")
 
         for line in build_job["install"]:
             line = line.replace("sudo", "")
