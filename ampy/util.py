@@ -28,11 +28,16 @@ def shell(cmd: str, *args, **kwargs):
     call(cmd, *args, **kwargs, shell=True)
 
 
-def call(cmd: str, *args, **kwargs):
-    if not kwargs.pop("silent", False):
+def call(cmd: str, *args, read_stdout=False, silent=False, **kwargs):
+    if not silent:
         print("$", cmd, *args)
 
     if kwargs.get("shell", False):
-        subprocess.check_call(cmd, **kwargs)
+        arg = cmd
     else:
-        subprocess.check_call([commands[cmd], *args], **kwargs)
+        arg = [commands[cmd], *args]
+
+    if read_stdout:
+        return subprocess.check_output(arg, encoding="utf-8", **kwargs)
+    else:
+        return subprocess.check_call(arg, **kwargs)
