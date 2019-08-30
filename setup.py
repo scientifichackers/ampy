@@ -26,7 +26,7 @@ VERSION = "2.0.0.dev"
 REQUIRED = ["click", "pyserial", "esptool",  "python-decouple"]
 
 # What packages are optional?
-EXTRAS = {"dev": ["twine"]}
+EXTRAS = {"dev": ["twine"], "ci": ["requests", "PyYAML"]}
 
 # The rest you shouldn't have to touch too much :)
 # ------------------------------------------------

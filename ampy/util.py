@@ -1,4 +1,3 @@
-import shlex
 import subprocess
 from distutils.spawn import find_executable
 
@@ -25,6 +24,15 @@ class CommandFinder:
 commands = CommandFinder()
 
 
-def call(cmd: str, *args):
-    print("$", cmd, *args)
-    subprocess.run([commands[cmd], *args])
+def shell(cmd: str, *args, **kwargs):
+    call(cmd, *args, **kwargs, shell=True)
+
+
+def call(cmd: str, *args, **kwargs):
+    if not kwargs.pop("silent", False):
+        print("$", cmd, *args)
+
+    if kwargs.get("shell", False):
+        subprocess.check_call(cmd, **kwargs)
+    else:
+        subprocess.check_call([commands[cmd], *args], **kwargs)

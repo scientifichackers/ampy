@@ -18,4 +18,3 @@ These tools end up simulating a human on the REPL, which is not very ideal. (See
 - [ ] Collaborative environment hat allows N developers to work on M devices at the same time.
 - [ ] Automate-able API that other toolchains and GUIs can exploit.
 - [ ] Install-able without a Python environment, by building distributable EXEs.
-

@@ -1,26 +1,87 @@
 import secrets
-from dataclasses import dataclass
+import shlex
+import shutil
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from time import time
-from typing import Iterable
+from typing import Iterable, NamedTuple
 
 from pkg_resources import EntryPoint
 
-from ampy import board_finder
-from ampy.settings import TMP_DIR
+from ampy.settings import TMP_DIR, CACHE_DIR
 from ampy.util import call
 
-HOME = "/home/docker"
-ESP_INIT_DATA = f"{HOME}/esp-open-sdk/sdk/bin/esp_init_data_default.bin"
-MP_DIR = f"{HOME}/micropython"
-DOCKER_IMG = "pycampers/micropython:prebuilt"
+ESP_INIT_DATA_BIN = "/home/docker/esp-open-sdk/sdk/bin/esp_init_data_default.bin"
+MP_GIT = "https://github.com/micropython/micropython.git"
+MP_CACHE_DIR = CACHE_DIR / "micropython"
+DOCKER_IMG = "micropython"
 
 
-@dataclass
-class Port:
+class MicropythonPort(NamedTuple):
     name: str
-    build_dir: str
+    build_dir_name: str
+
+
+class ItemToCopy(NamedTuple):
+    src: Path
+    dest: Path
+
+
+def main(mp_port: MicropythonPort, main_py: Path, mpy_code: Path) -> Path:
+    if not MP_CACHE_DIR.exists():
+        call("git", "clone", MP_GIT, MP_CACHE_DIR)
+
+    mp_port_dir = MP_CACHE_DIR / "ports" / mp_port.name
+    modules_dir = mp_port_dir / "modules"
+
+    with clean_copy(
+        ItemToCopy(src=main_py, dest=modules_dir / "main.py"),
+        ItemToCopy(src=mpy_code, dest=modules_dir / mpy_code.name),
+    ):
+        for build_cmd in [
+            "git submodule update --init lib/axtls lib/berkeley-db-1.xx",
+            "make -C mpy-cross",
+            "make -C ports/esp8266",
+        ]:
+            call(
+                "docker",
+                "run",
+                f"-v={MP_CACHE_DIR}:{MP_CACHE_DIR}",
+                f"-w={MP_CACHE_DIR}",
+                DOCKER_IMG,
+                *shlex.split(build_cmd),
+            )
+
+        return shutil.copy(
+            mp_port_dir / mp_port.build_dir_name / "firmware-combined.bin",
+            TMP_DIR
+            / f"{'esp8266'} {datetime.now().strftime('%d-%m-%Y_%I-%M-%S_%p')} firmware-combined.bin",
+        )
+
+
+@contextmanager
+def clean_copy(*items: ItemToCopy):
+    delete_multiple(*items)
+    for item in items:
+        try:
+            shutil.copy(item.src, item.dest)
+        except IsADirectoryError:
+            shutil.copytree(item.src, item.dest)
+    try:
+        yield
+    finally:
+        delete_multiple(*items)
+
+
+def delete_multiple(*items: ItemToCopy):
+    for item in items:
+        try:
+            shutil.rmtree(item.dest)
+        except FileNotFoundError:
+            pass
+        except NotADirectoryError:
+            item.dest.unlink()
 
 
 def generate_main_py(entrypoints: Iterable[EntryPoint]):
@@ -31,60 +92,17 @@ def generate_main_py(entrypoints: Iterable[EntryPoint]):
     return outfile
 
 
-def main(port: Port, main_py: Path, code: Path, *, extra_files=None):
-    outfile = (
-            TMP_DIR
-            / f"{'esp8266'} {datetime.now().strftime('%d-%m-%Y_%I-%M-%S_%p')} firmware-combined.bin"
-    )
-    if extra_files is None:
-        extra_files = {}
-
-    container = f"ampy-builder--{secrets.token_urlsafe(8)}"
-    port_dir = f"{MP_DIR}/ports/{port.name}"
-
-    # start a container
-    call(
-        "docker",
-        "run",
-        "-td",  # keeps container running in background
-        f"-w={port_dir}",
-        f"--name={container}",
-        DOCKER_IMG,
-    )
-
-    try:
-        # copy code from host to container
-        call("docker", "cp", code, f"{container}:{port_dir}/modules")
-        call("docker", "cp", main_py, f"{container}:{port_dir}/modules/main.py")
-
-        # build firmware
-        call("docker", "exec", container, "make")
-
-        # copy build output from container to host
-        files = {
-            f"{port_dir}/{port.build_dir}/firmware-combined.bin": outfile,
-            **extra_files,
-        }
-        for src, dest in files.items():
-            call("docker", "cp", f"{container}:{src}", dest)
-    finally:
-        call("docker", "rm", "-f", container)
-
-    return outfile
-
-
 if __name__ == "__main__":
     s = time()
-    board = next(board_finder.main())
-    print(board)
+    # board = next(board_finder.main())
+    # print(board)
 
     firmware = main(
-        Port("esp8266", "build"),
+        MicropythonPort("esp8266", "build"),
         generate_main_py([EntryPoint.parse("x=hello:main")]),
         Path(__file__).parent / "hello.py",
-        extra_files={ESP_INIT_DATA: Path.cwd()},
     )
-
-    call("esptool.py", f"--port={board.port}", "erase_flash")
-    call("esptool.py", f"--port={board.port}", "write_flash", "--verify", "0", firmware)
+    print(firmware)
+    # call("esptool.py", f"--port={board.port}", "erase_flash")
+    # call("esptool.py", f"--port={board.port}", "write_flash", "--verify", "0", firmware)
     print(time() - s)

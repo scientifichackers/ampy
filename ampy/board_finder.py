@@ -1,7 +1,6 @@
 import os
 from contextlib import redirect_stdout
-from dataclasses import dataclass
-from typing import Generator, List
+from typing import Generator, List, NamedTuple
 
 from esptool import ESPLoader, ESP8266ROM, ESP32ROM
 from serial.tools import list_ports
@@ -9,19 +8,12 @@ from serial.tools import list_ports
 from ampy import settings
 
 
-@dataclass
-class Board:
+class Board(NamedTuple):
     chip: str
     features: List[str]
     crystal_mhz: int
     mac: str
     port: str
-
-
-class ConnectModes:
-    default_reset = "default_reset"
-    no_reset = "no_reset"
-    no_reset_no_sync = "no_reset_no_sync"
 
 
 def main() -> Generator[Board, None, None]:
@@ -43,17 +35,16 @@ def main() -> Generator[Board, None, None]:
             )
 
 
+class ConnectModes:
+    default_reset = "default_reset"
+    no_reset = "no_reset"
+    no_reset_no_sync = "no_reset_no_sync"
+
+
 CHIP_CLASSES = {
     ESP8266ROM.DATE_REG_VALUE: ESP8266ROM,
     ESP32ROM.DATE_REG_VALUE: ESP32ROM,
 }
-
-
-def connect_attempt(loader: ESPLoader, mode: str):
-    for it in False, True:
-        last_error = loader._connect_attempt(mode=mode, esp32r0_delay=it)
-        if last_error is None:
-            break
 
 
 def detect_chip(port: str):
@@ -62,6 +53,13 @@ def detect_chip(port: str):
         connect_attempt(loader, ConnectModes.default_reset)
     data_reg = loader.read_reg(ESPLoader.UART_DATA_REG_ADDR)
     return CHIP_CLASSES[data_reg](loader._port, loader._port.baudrate)
+
+
+def connect_attempt(loader: ESPLoader, mode: str):
+    for it in False, True:
+        last_error = loader._connect_attempt(mode=mode, esp32r0_delay=it)
+        if last_error is None:
+            break
 
 
 if __name__ == "__main__":

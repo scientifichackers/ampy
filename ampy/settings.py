@@ -6,7 +6,11 @@ from esptool import ESPLoader
 
 BAUD = config("AMPY_BAUD", ESPLoader.ESP_ROM_BAUD, cast=int)
 TMP_DIR = Path(gettempdir()) / "ampy"
-try:
-    TMP_DIR.mkdir()
-except FileExistsError:
-    pass
+CACHE_DIR = Path.home() / ".cache" / "ampy"
+DOCKER_IMAGE = "pycampers/micropython"
+
+for dir in TMP_DIR, CACHE_DIR:
+    try:
+        dir.mkdir()
+    except FileExistsError:
+        pass

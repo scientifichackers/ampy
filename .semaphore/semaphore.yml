@@ -1,0 +1,22 @@
+version: v1.0
+name: Build and test docker images
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu1804
+
+blocks:
+  - name: "Build"
+    task:
+      jobs:
+      - name: Docker build
+        matrix:
+          - env_var: MPY_PORT
+            values:
+              - esp32
+              - esp8266
+        commands:
+          - checkout
+          - cache restore
+          - pip install -e .[ci]
+          - cache store
