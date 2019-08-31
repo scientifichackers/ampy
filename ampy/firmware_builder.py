@@ -1,5 +1,4 @@
 import secrets
-import shlex
 import shutil
 from contextlib import contextmanager
 from datetime import datetime
@@ -9,18 +8,10 @@ from typing import Iterable, NamedTuple
 
 from pkg_resources import EntryPoint
 
-from ampy.settings import TMP_DIR, CACHE_DIR
-from ampy.util import call
-
-ESP_INIT_DATA_BIN = "/home/docker/esp-open-sdk/sdk/bin/esp_init_data_default.bin"
-MP_GIT = "https://github.com/micropython/micropython.git"
-MP_CACHE_DIR = CACHE_DIR / "micropython"
-DOCKER_IMG = "micropython"
-
-
-class MicropythonPort(NamedTuple):
-    name: str
-    build_dir_name: str
+from ampy import board_finder
+from ampy.mpy_boards import MpyBoard
+from ampy.settings import TMP_DIR
+from ampy.util import update_mpy_repo
 
 
 class ItemToCopy(NamedTuple):
@@ -28,35 +19,18 @@ class ItemToCopy(NamedTuple):
     dest: Path
 
 
-def main(mp_port: MicropythonPort, main_py: Path, mpy_code: Path) -> Path:
-    if not MP_CACHE_DIR.exists():
-        call("git", "clone", MP_GIT, MP_CACHE_DIR)
-
-    mp_port_dir = MP_CACHE_DIR / "ports" / mp_port.name
-    modules_dir = mp_port_dir / "modules"
+def main(board: MpyBoard, main_py: Path, mpy_code: Path) -> Path:
+    update_mpy_repo()
 
     with clean_copy(
-        ItemToCopy(src=main_py, dest=modules_dir / "main.py"),
-        ItemToCopy(src=mpy_code, dest=modules_dir / mpy_code.name),
+        ItemToCopy(src=main_py, dest=board.modules_dir / "main.py"),
+        ItemToCopy(src=mpy_code, dest=board.modules_dir / mpy_code.name),
     ):
-        for build_cmd in [
-            "git submodule update --init lib/axtls lib/berkeley-db-1.xx",
-            "make -C mpy-cross",
-            "make -C ports/esp8266",
-        ]:
-            call(
-                "docker",
-                "run",
-                f"-v={MP_CACHE_DIR}:{MP_CACHE_DIR}",
-                f"-w={MP_CACHE_DIR}",
-                DOCKER_IMG,
-                *shlex.split(build_cmd),
-            )
-
+        board.build()
         return shutil.copy(
-            mp_port_dir / mp_port.build_dir_name / "firmware-combined.bin",
+            board.firmware_bin,
             TMP_DIR
-            / f"{'esp8266'} {datetime.now().strftime('%d-%m-%Y_%I-%M-%S_%p')} firmware-combined.bin",
+            / f"{board.chip}-firmware@{datetime.now().strftime('%d-%m-%Y_%I-%M-%S_%p')}.bin",
         )
 
 
@@ -84,25 +58,31 @@ def delete_multiple(*items: ItemToCopy):
             item.dest.unlink()
 
 
-def generate_main_py(entrypoints: Iterable[EntryPoint]):
+def generate_main_py(entrypoints: Iterable[str]):
     outfile = TMP_DIR / f"{secrets.token_urlsafe(8)}-main.py"
+
     with open(outfile, "w") as f:
-        for ep in entrypoints:
-            f.write(f"import {ep.module_name}\n{ep.module_name}.{ep.attrs[0]}()")
+        for ep_str in entrypoints:
+            ep = EntryPoint.parse(ep_str)
+            f.write(f"import {ep.module_name}\n")
+            if not ep.attrs:
+                continue
+            f.write(f"{ep.module_name}.{ep.attrs[0]}()\n")
+
     return outfile
 
 
 if __name__ == "__main__":
     s = time()
-    # board = next(board_finder.main())
-    # print(board)
+    board = next(board_finder.main())
+    print(board)
 
     firmware = main(
-        MicropythonPort("esp8266", "build"),
-        generate_main_py([EntryPoint.parse("x=hello:main")]),
-        Path(__file__).parent / "hello.py",
+        board,
+        generate_main_py(["task1=testmodule.hello:main", "task2=testmodule.bye"]),
+        Path(__file__).parent / "testmodule",
     )
     print(firmware)
-    # call("esptool.py", f"--port={board.port}", "erase_flash")
-    # call("esptool.py", f"--port={board.port}", "write_flash", "--verify", "0", firmware)
+
+    board.flash(firmware)
     print(time() - s)
