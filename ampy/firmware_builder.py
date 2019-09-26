@@ -19,12 +19,15 @@ class ItemToCopy(NamedTuple):
     dest: Path
 
 
-def main(board: MpyBoard, main_py: Path, mpy_code: Path) -> Path:
+def main(board: MpyBoard, main_py: Path, modules: Iterable[Path]) -> Path:
     update_mpy_repo()
 
     with clean_copy(
         ItemToCopy(src=main_py, dest=board.modules_dir / "main.py"),
-        ItemToCopy(src=mpy_code, dest=board.modules_dir / mpy_code.name),
+        *(
+            ItemToCopy(src=module, dest=board.modules_dir / module.name)
+            for module in modules
+        ),
     ):
         board.build()
         return shutil.copy(
@@ -38,6 +41,7 @@ def main(board: MpyBoard, main_py: Path, mpy_code: Path) -> Path:
 def clean_copy(*items: ItemToCopy):
     delete_multiple(*items)
     for item in items:
+        print(f"Copying '{item.src}' -> '{item.dest}'...")
         try:
             shutil.copy(item.src, item.dest)
         except IsADirectoryError:
@@ -51,6 +55,7 @@ def clean_copy(*items: ItemToCopy):
 def delete_multiple(*items: ItemToCopy):
     for item in items:
         try:
+            print(f"Deleting '{item.dest}'...")
             shutil.rmtree(item.dest)
         except FileNotFoundError:
             pass
@@ -62,12 +67,17 @@ def generate_main_py(entrypoints: Iterable[str]):
     outfile = TMP_DIR / f"{secrets.token_urlsafe(8)}-main.py"
 
     with open(outfile, "w") as f:
-        for ep_str in entrypoints:
-            ep = EntryPoint.parse(ep_str)
-            f.write(f"import {ep.module_name}\n")
-            if not ep.attrs:
+        for entrypoint_str in entrypoints:
+            # parse entrypoint string of the format "<module>:<attrs>"
+            entrypoint_obj = EntryPoint.parse(f"name={entrypoint_str} [extras]")
+
+            # write import statement
+            f.write(f"import {entrypoint_obj.module_name}\n")
+
+            # write function call if provided
+            if not entrypoint_obj.attrs:
                 continue
-            f.write(f"{ep.module_name}.{ep.attrs[0]}()\n")
+            f.write(f"{entrypoint_obj.module_name}.{entrypoint_obj.attrs[0]}()\n")
 
     return outfile
 
@@ -79,8 +89,8 @@ if __name__ == "__main__":
 
     firmware = main(
         board,
-        generate_main_py(["task1=testmodule.hello:main", "task2=testmodule.bye"]),
-        Path(__file__).parent / "testmodule",
+        generate_main_py(["testmodule.hello:main", "testmodule.bye"]),
+        "dw",
     )
     print(firmware)
 

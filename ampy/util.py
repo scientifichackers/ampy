@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 import subprocess
 from distutils.spawn import find_executable
 from pathlib import Path
@@ -24,6 +25,11 @@ def update_mpy_repo(version: str = "master") -> str:
     call("git", "submodule", "update", "--init", "--recursive")
 
     return version
+
+
+def clean_mpy_repo():
+    print(f"Deleting {MPY_REPO_DIR}...")
+    shutil.rmtree(MPY_REPO_DIR, ignore_errors=True)
 
 
 def extract_espidf_suphash() -> str:
@@ -78,7 +84,6 @@ def call(cmd: str, *args, read_stdout=False, silent=False, **kwargs):
         return subprocess.check_output(arg, encoding="utf-8", **kwargs)
     else:
         return subprocess.check_call(arg, **kwargs)
-
 
 
 if __name__ == "__main__":

@@ -103,7 +103,7 @@ setup(
     packages=find_packages(exclude=("tests",)),
     # If your package is a single module, use this instead of 'packages':
     # py_modules=['mypackage'],
-    entry_points={"console_scripts": ["ampy=ampy.cli:cli"]},
+    entry_points={"console_scripts": ["ampy2=ampy.cli:cli"]},
     install_requires=REQUIRED,
     extras_require=EXTRAS,
     include_package_data=True,
