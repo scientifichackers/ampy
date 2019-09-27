@@ -1,17 +1,17 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import List
 
 import requests
 
-from ampy.settings import MPY_REPO_DIR, CACHE_DIR
-from ampy.util import call, docker_run, extract_espidf_suphash
+from ampy.core.settings import MPY_REPO_DIR, CACHE_DIR
+from ampy.core.util import call, docker_run, extract_espidf_suphash
 
-BUILD_SCRIPTS = Path(__file__).parent / "build_scripts"
+BUILD_SCRIPTS = Path(__file__).parent.parent / "build_scripts"
 ESP_INIT_DATA_FILE = CACHE_DIR / "esp_init_data_default.bin"
 
 
-@dataclass
+@dataclass(repr=False)
 class MpyBoard:
     chip: str
     description: str
@@ -20,6 +20,7 @@ class MpyBoard:
     crystal_mhz: int
     mac: str
     port: str
+    baud: int
 
     board_type: str
     board_dir = None
@@ -53,8 +54,18 @@ class MpyBoard:
             ESP_INIT_DATA_FILE,
         )
 
+    def __str__(self):
+        return f"{self.description} @ {self.port}"
 
-@dataclass
+    def __repr__(self):
+        return (
+            f"{self.__class__.__qualname__}(\n    "
+            + "\n    ".join(f"{k} = {v!r}," for k, v in asdict(self).items())
+            + "\n)"
+        )
+
+
+@dataclass(repr=False)
 class ESP8266Board(MpyBoard):
     board_dir = MPY_REPO_DIR / "ports" / "esp8266"
     build_dir = board_dir / "build"
@@ -80,7 +91,7 @@ class ESP8266Board(MpyBoard):
         call(*self.esptool_args, "write_flash", "--verify", "0", firmware)
 
 
-@dataclass
+@dataclass(repr=False)
 class ESP32Board(MpyBoard):
     board_dir = MPY_REPO_DIR / "ports" / "esp32"
     modules_dir = board_dir / "modules"

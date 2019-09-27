@@ -23,7 +23,15 @@ REQUIRES_PYTHON = ">=3.7"
 VERSION = "2.0.0.dev"
 
 # What packages are required for this module to be executed?
-REQUIRED = ["click", "pyserial", "esptool", "python-decouple", "requests"]
+REQUIRED = [
+    "click",
+    "pyserial",
+    "esptool",
+    "python-dotenv",
+    "requests",
+    "bullet",
+    "halo",
+]
 
 # What packages are optional?
 EXTRAS = {"dev": ["twine"]}

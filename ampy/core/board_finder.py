@@ -1,28 +1,19 @@
 import os
 from contextlib import redirect_stdout
-from typing import Generator
+from typing import Generator, List
 
 from esptool import ESPLoader, ESP8266ROM, ESP32ROM, DETECTED_FLASH_SIZES
-from serial.tools import list_ports
+from serial.tools import list_ports as _list_ports
 
-from ampy import settings
-from ampy.mpy_boards import MpyBoard, ESP8266Board, ESP32Board
+from ampy.core.mpy_boards import MpyBoard, ESP8266Board, ESP32Board
 
 
-def main() -> Generator[MpyBoard, None, None]:
-    ports = [it.device for it in list_ports.comports()]
-    ports.sort(reverse=True)
-    for port in ports:
+def main(baud: int) -> Generator[MpyBoard, None, None]:
+    for port in list_ports():
         try:
-            yield detect_board(port)
+            yield detect_board(port, baud)
         except StopIteration:
             pass
-
-
-class ConnectModes:
-    default_reset = "default_reset"
-    no_reset = "no_reset"
-    no_reset_no_sync = "no_reset_no_sync"
 
 
 CHIP_CLASSES = {
@@ -31,12 +22,23 @@ CHIP_CLASSES = {
 }
 
 
-def detect_board(port: str) -> MpyBoard:
-    loader = ESPLoader(port, settings.BAUD)
-    try:
-        with open(os.devnull, "w") as f, redirect_stdout(f):
-            connect_attempt(loader, ConnectModes.default_reset)
+def list_ports() -> List[str]:
+    ports = [
+        it.device
+        for it in _list_ports.comports()
+        if "BLUETOOTH" not in it.device.upper()
+    ]
+    ports.sort(reverse=True)
+    return ports
 
+
+def detect_board(port: str, baud: int) -> MpyBoard:
+    board_cls: MpyBoard.__class__
+    rom_cls: ESPLoader.__class__
+
+    loader = ESPLoader(port, baud)
+    try:
+        connect_attempt(loader)
         data_reg = loader.read_reg(ESPLoader.UART_DATA_REG_ADDR)
         rom_cls, board_cls = CHIP_CLASSES[data_reg]
         esp = rom_cls(loader._port, loader._port.baudrate)
@@ -44,16 +46,16 @@ def detect_board(port: str) -> MpyBoard:
             return board_cls(
                 chip=esp.CHIP_NAME,
                 description=esp.get_chip_description(),
-                # flash_size=detect_flash_size(esp),
-                flash_size='x',
                 features=esp.get_chip_features(),
                 crystal_mhz=esp.get_crystal_freq(),
+                flash_size=detect_flash_size(esp),
                 mac=":".join(f"{it:02x}" for it in esp.read_mac()),
                 port=port,
                 board_type="GENERIC",
+                baud=baud,
             )
         finally:
-            esp.hard_reset()
+            esp.soft_reset(False)
     finally:
         loader._port.close()
 
@@ -64,13 +66,8 @@ def detect_flash_size(esp: ESPLoader):
     return DETECTED_FLASH_SIZES.get(esp.run_spiflash_command(0x9F, b"", 24) >> 16)
 
 
-def connect_attempt(loader: ESPLoader, mode: str):
+def connect_attempt(loader: ESPLoader):
     for it in False, True:
-        last_error = loader._connect_attempt(mode=mode, esp32r0_delay=it)
-        if last_error is None:
-            break
-
-
-if __name__ == "__main__":
-    for it in main():
-        print(it)
+        with open(os.devnull, "w") as f, redirect_stdout(f):
+            if loader._connect_attempt(mode="default_reset", esp32r0_delay=it) is None:
+                return

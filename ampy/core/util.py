@@ -7,7 +7,7 @@ from pathlib import Path
 
 from click import style
 
-from ampy.settings import MPY_REPO_URL, MPY_REPO_DIR
+from ampy.core.settings import MPY_REPO_URL, MPY_REPO_DIR
 
 ESP32_MAKEFILE_PATH = MPY_REPO_DIR / "ports" / "esp32" / "Makefile"
 ESPIDF_SUPHASH_REGEX = re.compile("(ESPIDF_SUPHASH)(\s+)(:=)(\s+)([A-z0-9]+)")
