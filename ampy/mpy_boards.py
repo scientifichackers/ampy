@@ -7,7 +7,7 @@ import requests
 from ampy.settings import MPY_REPO_DIR, CACHE_DIR
 from ampy.util import call, docker_run, extract_espidf_suphash
 
-BUILD_SCRIPTS = Path(__file__).parent / "scripts"
+BUILD_SCRIPTS = Path(__file__).parent / "build_scripts"
 ESP_INIT_DATA_FILE = CACHE_DIR / "esp_init_data_default.bin"
 
 
@@ -45,7 +45,13 @@ class MpyBoard:
         if not ESP_INIT_DATA_FILE.exists():
             ESP_INIT_DATA_FILE.write_bytes(requests.get(self.esp_init_data_url).content)
 
-        call(*self.esptool_args, "write_flash", "--verify", "0xffc000", ESP_INIT_DATA_FILE)
+        call(
+            *self.esptool_args,
+            "write_flash",
+            "--verify",
+            "0xffc000",
+            ESP_INIT_DATA_FILE,
+        )
 
 
 @dataclass
@@ -57,13 +63,12 @@ class ESP8266Board(MpyBoard):
 
     docker_image = "registry.gitlab.com/alelec/docker-esp-open-sdk"
     xtensa_path = "/tools/xtensa-lx106-elf"
-    build_script = docker_image, Path(__file__).parent / "scripts" / "esp8266.sh"
-
+    build_script = BUILD_SCRIPTS / "esp8266.sh"
 
     def build(self):
         docker_run(
             self.docker_image,
-            BUILD_SCRIPTS / "esp8266.sh",
+            self.build_script,
             env={
                 "AMPY_XTENSA_PATH": self.xtensa_path,
                 "AMPY_BOARD_DIR": self.board_dir,
@@ -90,11 +95,12 @@ class ESP32Board(MpyBoard):
 
     docker_image = "registry.gitlab.com/alelec/docker-esp32-toolchain:{ESPIDF_SUPHASH}"
     esp_idf_path = "/esp"
+    build_script = BUILD_SCRIPTS / "esp32.sh"
 
     def build(self):
         docker_run(
             self.docker_image.format(ESPIDF_SUPHASH=extract_espidf_suphash()),
-            BUILD_SCRIPTS / "esp32.sh",
+            self.build_script,
             env={
                 "AMPY_BOARD_DIR": self.board_dir,
                 "AMPY_BOARD": self.board_type,
