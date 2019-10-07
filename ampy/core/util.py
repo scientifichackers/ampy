@@ -4,6 +4,7 @@ import shutil
 import subprocess
 from distutils.spawn import find_executable
 from pathlib import Path
+from typing import Dict, List, Any, Union
 
 from click import style
 
@@ -45,8 +46,8 @@ def docker_run(image: str, script: Path, *, mount: Path = MPY_REPO_DIR, env=None
     )
 
 
-class CommandFinder:
-    cache = {}
+class ExecutableStore:
+    cache: Dict[str, Path] = {}
 
     def __getitem__(self, item):
         try:
@@ -64,7 +65,7 @@ class CommandFinder:
         return path
 
 
-commands = CommandFinder()
+executables = ExecutableStore()
 
 
 def shell(cmd: str, *args, **kwargs):
@@ -75,10 +76,11 @@ def call(cmd: str, *args, read_stdout=False, silent=False, **kwargs):
     if not silent:
         print(style(f"$ {cmd} {' '.join(map(str, args))}", fg="yellow"))
 
+    arg: Union[List[str], str]
     if kwargs.get("shell", False):
         arg = cmd
     else:
-        arg = [commands[cmd], *args]
+        arg = [executables[cmd], *args]
 
     if read_stdout:
         return subprocess.check_output(arg, encoding="utf-8", **kwargs)

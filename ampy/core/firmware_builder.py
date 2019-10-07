@@ -1,9 +1,9 @@
-import secrets
+import io
 import shutil
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, NamedTuple
+from typing import Iterable, Tuple, Optional
 
 from pkg_resources import EntryPoint
 
@@ -11,23 +11,16 @@ from ampy.core.mpy_boards import MpyBoard
 from ampy.core.settings import TMP_DIR
 
 
-class ItemToCopy(NamedTuple):
-    src: Path
-    dest: Path
+def main(board: MpyBoard, entrypoint: Optional[str], modules: Iterable[Path]) -> Path:
+    main_py = generate_main_py(entrypoint, modules)
+    print("-" * 10 + " main.py " + "-" * 10, main_py, "-" * 29, sep="\n")
 
-
-def main(board: MpyBoard, entrypoints: Iterable[str], modules: Iterable[Path]) -> Path:
-    main_py = generate_main_py(entrypoints, modules)
-    print("-" * 10 + " main.py " + "-" * 10, main_py.read_text(), "-" * 29, sep="\n")
-
-    with clean_copy(
+    with clean_create(
         # include generated main.py file in build
-        ItemToCopy(src=main_py, dest=board.modules_dir / "main.py"),
+        (main_py, board.modules_dir / "main.py")
+    ), clean_copy(
         # include specified modules in build
-        *(
-            ItemToCopy(src=module, dest=board.modules_dir / module.name)
-            for module in modules
-        ),
+        *((module, board.modules_dir / module.name) for module in modules)
     ):
         board.build()
         return shutil.copy(
@@ -38,56 +31,70 @@ def main(board: MpyBoard, entrypoints: Iterable[str], modules: Iterable[Path]) -
 
 
 @contextmanager
-def clean_copy(*items: ItemToCopy):
-    delete_multiple(*items)
-    for item in items:
-        print(f"Copying '{item.src}' -> '{item.dest}'...")
-        try:
-            shutil.copy(item.src, item.dest)
-        except IsADirectoryError:
-            shutil.copytree(item.src, item.dest)
+def clean_copy(*to_copy: Tuple[Path, Path]):
+    with ensure_rm_r(*(it[1] for it in to_copy)):
+        for src, dest in to_copy:
+            print(f"Copying '{src}' -> '{dest}'...")
+            try:
+                shutil.copy(src, dest)
+            except IsADirectoryError:
+                shutil.copytree(src, dest)
+        yield
+
+
+@contextmanager
+def clean_create(*to_create: Tuple[str, Path]):
+    with ensure_rm_r(*(it[1] for it in to_create)):
+        for text, dest in to_create:
+            print(f"Creating '{dest}'...")
+            dest.write_text(text)
+        yield
+
+
+@contextmanager
+def ensure_rm_r(*paths: Path):
+    rm_r(*paths)
     try:
         yield
     finally:
-        delete_multiple(*items)
+        rm_r(*paths)
 
 
-def delete_multiple(*items: ItemToCopy):
-    for item in items:
+def rm_r(*paths: Path):
+    for path in paths:
+        print(f"Deleting '{path}'...")
         try:
-            print(f"Deleting '{item.dest}'...")
-            shutil.rmtree(item.dest)
+            shutil.rmtree(path)
         except FileNotFoundError:
             pass
         except NotADirectoryError:
-            item.dest.unlink()
+            path.unlink()
 
 
-def generate_main_py(entrypoints: Iterable[str], modules: Iterable[Path]):
-    outfile = TMP_DIR / f"{secrets.token_urlsafe(8)}-main.py"
+def generate_main_py(entrypoint: Optional[str], modules: Iterable[Path]) -> str:
+    with io.StringIO() as f:
+        if entrypoint is not None:
+            # parse entrypoint string of the format "<module>:<attrs>"
+            entrypoint_obj = EntryPoint.parse(f"name={entrypoint} [extras]")
 
-    with open(outfile, "w") as f:
-        if entrypoints:
-            for entrypoint_str in entrypoints:
-                # parse entrypoint string of the format "<module>:<attrs>"
-                entrypoint_obj = EntryPoint.parse(f"name={entrypoint_str} [extras]")
+            # write import statement
+            f.write(f"import {entrypoint_obj.module_name}\n")
 
-                # write import statement
-                f.write(f"import {entrypoint_obj.module_name}\n")
-
-                # write function call if provided
-                if not entrypoint_obj.attrs:
-                    continue
+            # write function call if provided
+            if entrypoint_obj.attrs:
                 f.write(f"{entrypoint_obj.module_name}.{entrypoint_obj.attrs[0]}()\n")
         else:
             # if no explicit entrypoint was provided, use the modules
             for module in modules:
+                # if it's a package, import the __main__.py file
+                # else, just import the module.
                 if module.is_dir():
-                    # if it's a package, execute the __main__.py file
                     if not (module / "__main__.py").exists():
                         continue
-                    f.write(f"import {module.name}.__main__")
+                    f.write(f"import {module.name}.__main__\n")
+                    break
                 else:
-                    f.write(f"import {module.name}")
+                    f.write(f"import {module.name}\n")
+                    break
 
-    return outfile
+        return f.getvalue()

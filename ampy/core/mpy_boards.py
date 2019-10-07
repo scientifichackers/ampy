@@ -21,8 +21,8 @@ class MpyBoard:
     mac: str
     port: str
     baud: int
-
     board_type: str
+
     board_dir = None
     build_dir = None
     modules_dir = None

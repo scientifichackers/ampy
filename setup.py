@@ -34,7 +34,7 @@ REQUIRED = [
 ]
 
 # What packages are optional?
-EXTRAS = {"dev": ["twine"]}
+EXTRAS = {"dev": ["twine", "mypy"]}
 
 # The rest you shouldn't have to touch too much :)
 # ------------------------------------------------

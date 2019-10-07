@@ -1,6 +1,6 @@
 import os
 from contextlib import redirect_stdout
-from typing import Generator, List
+from typing import Generator, List, Type
 
 from esptool import ESPLoader, ESP8266ROM, ESP32ROM, DETECTED_FLASH_SIZES
 from serial.tools import list_ports as _list_ports
@@ -33,8 +33,8 @@ def list_ports() -> List[str]:
 
 
 def detect_board(port: str, baud: int) -> MpyBoard:
-    board_cls: MpyBoard.__class__
-    rom_cls: ESPLoader.__class__
+    board_cls: Type[MpyBoard]
+    rom_cls: Type[ESPLoader]
 
     loader = ESPLoader(port, baud)
     try:
@@ -51,8 +51,8 @@ def detect_board(port: str, baud: int) -> MpyBoard:
                 flash_size=detect_flash_size(esp),
                 mac=":".join(f"{it:02x}" for it in esp.read_mac()),
                 port=port,
-                board_type="GENERIC",
                 baud=baud,
+                board_type="GENERIC",
             )
         finally:
             esp.soft_reset(False)

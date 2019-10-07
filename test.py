@@ -1,0 +1,3 @@
+import dialmap
+
+print(dialmap)
