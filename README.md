@@ -21,3 +21,10 @@ These tools end up simulating a human on the REPL, which is not very ideal. (See
 - [ ] Expose an API that other toolchains and GUIs can exploit.
 - [ ] A plugin system that allows 3rd parties to extend ampy's functionality. (Like [cargo plugins](https://lib.rs/development-tools/cargo-plugins))
 - [ ] Install-able without a Python environment, by building distributable EXEs.
+
+### Try
+
+```
+$ pip install -e git+https://github.com/scientifichackers/ampy.git
+$ ampy2 --help
+```
