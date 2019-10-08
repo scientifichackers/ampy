@@ -110,19 +110,24 @@ def pass_single_board(f):
 
 
 @cli.add_command
-@click.command(
-    help="List all micropython boards attached via USB serial port.\n\n"
-    "Will soft-reset all devices when run."
-)
+@click.command()
 def devices():
+    """
+    List all micropython boards attached via USB serial port.
+
+    Note: This will soft-reset all devices when run.
+    """
     for board in find_boards():
         print(repr(board))
 
 
 @cli.add_command
-@click.command(help="Stream logs from device.")
+@click.command()
 @pass_single_board
 def logs(board: board_finder.MpyBoard):
+    """
+    Stream logs from device, through serial connection.
+    """
     print(f"Streaming output for: {board}.\n" f"You may need to reset the device once.")
     with serial.Serial(board.port, baudrate=board.baud) as ser:
         ser.flush()
@@ -132,17 +137,18 @@ def logs(board: board_finder.MpyBoard):
 
 
 @cli.add_command
-@click.command(help="Flash micropython firmware.")
+@click.command()
 @click.argument("firmware", type=click.Path(exists=True, resolve_path=True))
 @pass_many_boards
 def flash(boards: List[board_finder.MpyBoard], firmware):
+    """Flash micropython firmware."""
     for board in boards:
         print(f"Flashing firmware to board: {board}")
         board.flash(Path(firmware))
 
 
 @cli.add_command
-@click.command(help="Build micropython firmware.")
+@click.command()
 @click.option(
     "--clean", "-c", is_flag=True, help="Clean local build cache.", is_eager=True
 )
@@ -153,14 +159,8 @@ def flash(boards: List[board_finder.MpyBoard], firmware):
     required=True,
     default="master",
 )
-@click.option(
-    "--dev",
-    "-d",
-    is_flag=True,
-    help="Build the ampy development firmware.",
-    is_eager=True,
-)
-@click.option("--offline", is_flag=True)
+@click.option("--dev", "-d", is_flag=True, is_eager=True)
+@click.option("--offline", is_flag=True, help="Offline mode.")
 @click.option(
     "--module",
     "-m",
@@ -183,6 +183,7 @@ def build(
     mpy_version: str,
     offline: bool,
 ):
+    """Build micropython firmware."""
     module = [Path(i) for i in module]
 
     if clean:
@@ -246,6 +247,22 @@ def build(
 @click.command()
 @click.argument("script", type=click.Path(exists=True, dir_okay=False))
 def run(script: str):
+    """
+    Remotely execute code on a board.
+
+    This will first, try to find a board on the network,
+    and then send the contents of the provided script.
+    The board will then, stream the output from the script.
+
+    The script must contain a main() function like so:
+
+    \b
+        def main(addr):
+            ...
+
+    where, addr is a 2-tuple (host: str, port: int),
+    the address of the computer sending the code, as seen by the board.
+    """
     host = discovery_client.main()
     print("Found board @", host)
     stdout = sys.stdout.buffer
