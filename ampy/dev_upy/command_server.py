@@ -3,20 +3,21 @@ import json
 import socket
 import struct
 
+from . import virtual_term
 from . import commands
 from .settings import (
     MAX_TCP_CONNECTIONS,
     TCP_MAX_SIZE,
     UINT_FMT,
     UINT_SIZE,
-    CODE_RECV_PORT,
+    COMMANDS_PORT,
     LOCAL_HOST,
 )
 
 
 def main():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.bind((LOCAL_HOST, CODE_RECV_PORT))
+    sock.bind((LOCAL_HOST, COMMANDS_PORT))
     sock.listen(MAX_TCP_CONNECTIONS)
     sock.setblocking(False)
 
@@ -56,9 +57,14 @@ def handle_client(sock, addr):
             req = json.loads(_data_mv[:size])
             print("recv req:", addr, req)
 
-            # dynamic dispatch, for calling a function defined int the commands module
+            # dynamic dispatch, for calling a function defined in the "commands" module
             func = getattr(commands, req["cmd"])
-            result = func(addr, *req["args"])
+
+            virtual_term.write_clients[addr] = f
+            try:
+                result = func(addr, *req["args"])
+            finally:
+                del virtual_term.write_clients[addr]
             print("req result:", result)
 
             if result is None:

@@ -40,12 +40,10 @@ class MpyBoard:
 
     def flash(self, firmware: Path):
         call(*self.esptool_args, "erase_flash")
-
         if self.flash_size != "16MB":
             return
         if not ESP_INIT_DATA_FILE.exists():
             ESP_INIT_DATA_FILE.write_bytes(requests.get(self.esp_init_data_url).content)
-
         call(
             *self.esptool_args,
             "write_flash",

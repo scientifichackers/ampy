@@ -13,7 +13,7 @@ from halo import Halo
 from ampy.core import board_finder, firmware_builder
 from ampy.core.settings import DEV_MODULE, MPY_REPO_DIR
 from ampy.core.util import clean_mpy_repo, update_mpy_repo
-from ampy.dev import discovery_client, command_client, commands
+from ampy.dev import discovery_client, commands
 
 ESP32_FAIL_MSG = """\
 \tNote: If you're using an ESP32, you may need to hold down the 'BOOT' button on your device while runing this command.
@@ -246,9 +246,16 @@ def build(
 @click.command()
 @click.argument("script", type=click.Path(exists=True, dir_okay=False))
 def run(script: str):
-    addr = discovery_client.main()
-    print("Found board @", addr)
-    print(commands.run_code(addr, Path(script).read_text()))
+    host = discovery_client.main()
+    print("Found board @", host)
+    stdout = sys.stdout.buffer
+    with commands.exec_func(host, Path(script).read_text()) as f:
+        while True:
+            b = f.read(1)
+            if not b:
+                return
+            stdout.write(b)
+            stdout.flush()
 
 
 if __name__ == "__main__":

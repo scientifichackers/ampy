@@ -1,19 +1,25 @@
+import io
 import json
 import socket
 import struct
-from typing import Any
+from contextlib import contextmanager
+from typing import Any, ContextManager
 
-from ampy.dev_upy.settings import UINT_FMT, TCP_MAX_SIZE, UINT_SIZE, CODE_RECV_PORT
+from ampy.dev_upy.settings import UINT_FMT, TCP_MAX_SIZE, UINT_SIZE, COMMANDS_PORT
 
 
-def main(addr: str, cmd: str, *args: Any) -> Any:
-    print(addr)
+@contextmanager  # type: ignore
+def main(host: str, cmd: str, *args: Any) -> ContextManager[io.BytesIO]:
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((addr, CODE_RECV_PORT))
-    print("connected")
-    n = sock.send(pack(json.dumps({"cmd": cmd, "args": args}).encode()))
-    print(f"sent {n} bytes")
-    return json.loads(sock.recv(1024))
+    sock.connect((host, COMMANDS_PORT))
+    sock.send(pack(json.dumps({"cmd": cmd, "args": args}).encode()))
+
+    f = sock.makefile(mode="rb")
+    try:
+        yield f
+    finally:
+        f.close()
+        sock.close()
 
 
 _max_payload_size = TCP_MAX_SIZE - UINT_SIZE
