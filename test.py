@@ -1,3 +1,0 @@
-import dialmap
-
-print(dialmap)

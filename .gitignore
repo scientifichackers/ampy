@@ -2,6 +2,10 @@
 .venv
 .DS_Store
 
+test.py
+test2.py
+dialmap.py
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
