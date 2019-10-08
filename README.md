@@ -27,4 +27,5 @@ These tools end up simulating a human on the REPL, which is not very ideal. (See
 ```
 $ pip install -e git+https://github.com/scientifichackers/ampy.git
 $ ampy2 --help
+$ ampy2 build --dev  # build the development firmware
 ```
