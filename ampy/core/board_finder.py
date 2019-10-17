@@ -1,6 +1,6 @@
 import os
 from contextlib import redirect_stdout
-from typing import Generator
+from typing import Generator, Iterable
 
 from esptool import ESPLoader, ESP8266ROM, ESP32ROM, DETECTED_FLASH_SIZES
 from serial import SerialException
@@ -24,7 +24,7 @@ def main(baud: int) -> Generator[MpyBoard, None, None]:
             pass
 
 
-def list_ports() -> Generator[str]:
+def list_ports() -> Iterable[str]:
     return (
         it.device for it in _list_ports.comports() if "BLUE" not in it.device.upper()
     )
