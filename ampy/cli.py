@@ -1,9 +1,8 @@
-import inspect
 import shutil
 import sys
 from functools import update_wrapper
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, cast
 
 import click
 import dotenv
@@ -141,11 +140,12 @@ def logs(board: board_finder.MpyBoard):
 @click.command()
 @click.argument("firmware", type=click.Path(exists=True, resolve_path=True))
 @pass_many_boards
-def flash(boards: List[board_finder.MpyBoard], firmware):
+def flash(boards: List[board_finder.MpyBoard], firmware: str):
     """Flash micropython firmware."""
+    f = Path(firmware)
     for board in boards:
         print(f"Flashing firmware to board: {board}")
-        board.flash(Path(firmware))
+        board.flash(f)
 
 
 @cli.add_command
@@ -185,7 +185,7 @@ def build(
     offline: bool,
 ):
     """Build micropython firmware."""
-    module = [Path(i) for i in module]
+    modules = [Path(i) for i in module]
 
     if clean:
         clean_mpy_repo()
@@ -207,7 +207,7 @@ def build(
                     fg="red",
                 )
             )
-        module = [DEV_MODULE] + module
+        modules = [DEV_MODULE] + modules
 
     if offline:
         if not MPY_REPO_DIR.exists():
@@ -227,21 +227,21 @@ def build(
 
     for board in boards:
         print("Building firmware for:", board)
-        firmware = firmware_builder.main(board, entrypoint, module)
+        firmware = firmware_builder.main(board, entrypoint, modules)
 
         if output_path is not None:
             shutil.copy(firmware, output_path)
-            firmware = output_path
+            firmware = Path(output_path)
 
         print("Built firmware:", firmware)
 
         if not yes and not click.confirm(
             "Do you want to flash this firmware right now? You can flash it later using:"
-            f"\n\t$ ampy flash {firmware}\n"
+            f"\n\t$ ampy flash '{firmware}'\n"
         ):
             continue
 
-        board.flash(Path(firmware))
+        board.flash(firmware)
 
 
 @cli.add_command

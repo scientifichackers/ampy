@@ -8,7 +8,11 @@ from ampy.core.settings import MPY_REPO_DIR, CACHE_DIR
 from ampy.core.util import call, docker_run, extract_espidf_suphash
 
 BUILD_SCRIPTS = Path(__file__).parent.parent / "build_scripts"
+
 ESP_INIT_DATA_FILE = CACHE_DIR / "esp_init_data_default.bin"
+ESP_INIT_DATA_URL = (
+    "https://github.com/espressif/ESP8266_AT/raw/master/bin/esp_init_data_default.bin"
+)
 
 
 @dataclass
@@ -23,15 +27,18 @@ class MpyBoard:
     baud: int
     board_type: str
 
+    # Sub-classes provide good defaults for these.
+    # Hide them from pretty printers.
     board_dir: Path = field(init=False, repr=False)
     build_dir: Path = field(init=False, repr=False)
     modules_dir: Path = field(init=False, repr=False)
-    firmware_bin: Path = field(init=False, repr=False)
+    firmware_path: Path = field(init=False, repr=False)
     docker_image: str = field(init=False, repr=False)
 
-    esp_init_data_url = "https://github.com/espressif/ESP8266_AT/raw/master/bin/esp_init_data_default.bin"
-
     def build(self):
+        ...
+
+    def flash(self, firmware: Path):
         ...
 
     @property
@@ -43,7 +50,7 @@ class MpyBoard:
         if self.flash_size != "16MB":
             return
         if not ESP_INIT_DATA_FILE.exists():
-            ESP_INIT_DATA_FILE.write_bytes(requests.get(self.esp_init_data_url).content)
+            ESP_INIT_DATA_FILE.write_bytes(requests.get(ESP_INIT_DATA_URL).content)
         call(
             *self.esptool_args,
             "write_flash",
@@ -60,7 +67,7 @@ class ESP8266Board(MpyBoard):
     board_dir = MPY_REPO_DIR / "ports" / "esp8266"
     build_dir = board_dir / "build"
     modules_dir = board_dir / "modules"
-    firmware_bin = build_dir / "firmware-combined.bin"
+    firmware_path = build_dir / "firmware-combined.bin"
     docker_image = "registry.gitlab.com/alelec/docker-esp-open-sdk"
 
     xtensa_path = "/tools/xtensa-lx106-elf"
@@ -90,7 +97,7 @@ class ESP32Board(MpyBoard):
         return self.board_dir / f"build-{self.board_type}"
 
     @property
-    def firmware_bin(self) -> Path:
+    def firmware_path(self) -> Path:
         return self.build_dir / "firmware.bin"
 
     docker_image = "registry.gitlab.com/alelec/docker-esp32-toolchain:{ESPIDF_SUPHASH}"
@@ -114,7 +121,7 @@ class ESP32Board(MpyBoard):
         call(*self.esptool_args, "write_flash", "--verify", "0x1000", firmware)
 
 
-# Inject a more pretty __repr__()
+# Inject a prettier __repr__()
 setattr(
     MpyBoard,
     "__repr__",

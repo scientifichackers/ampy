@@ -1,8 +1,8 @@
 import io
 import shutil
-import tempfile
 from datetime import datetime
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Iterable, Optional
 
 from pkg_resources import EntryPoint
@@ -16,7 +16,7 @@ def main(board: MpyBoard, entrypoint: Optional[str], modules: Iterable[Path]) ->
     main_py = generate_main_py(entrypoint, modules)
     print("-" * 10 + " main.py " + "-" * 10, main_py, "-" * 29, sep="\n")
 
-    with tempfile.TemporaryDirectory() as dir:
+    with TemporaryDirectory() as dir:
         tmp_main_py = Path(dir) / "main.py"
         tmp_main_py.write_text(main_py)
 
@@ -28,7 +28,7 @@ def main(board: MpyBoard, entrypoint: Optional[str], modules: Iterable[Path]) ->
         ):
             board.build()
             return shutil.copy(
-                board.firmware_bin,
+                board.firmware_path,
                 TMP_DIR
                 / f"{board.chip}-firmware@{datetime.now().strftime('%d-%m-%Y_%I-%M-%S_%p')}.bin",
             )

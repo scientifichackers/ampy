@@ -9,8 +9,9 @@ from typing import Dict, List, Union, Tuple, Iterable
 
 from click import style
 
-from ampy.core.settings import MPY_REPO_URL, MPY_REPO_DIR
+from ampy.core.settings import MPY_REPO_DIR
 
+MPY_REPO_URL = "https://github.com/micropython/micropython.git"
 ESP32_MAKEFILE_PATH = MPY_REPO_DIR / "ports" / "esp32" / "Makefile"
 ESPIDF_SUPHASH_REGEX = re.compile("(ESPIDF_SUPHASH)(\s+)(:=)(\s+)([A-z0-9]+)")
 DOCKER_HOME = "/root"

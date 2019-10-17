@@ -1,12 +1,17 @@
 import os
 from contextlib import redirect_stdout
-from typing import Generator, List, Type
+from typing import Generator
 
 from esptool import ESPLoader, ESP8266ROM, ESP32ROM, DETECTED_FLASH_SIZES
 from serial import SerialException
 from serial.tools import list_ports as _list_ports
 
 from ampy.core.mpy_boards import MpyBoard, ESP8266Board, ESP32Board
+
+CHIP_CLASSES = {
+    ESP8266ROM.DATE_REG_VALUE: (ESP8266ROM, ESP8266Board),
+    ESP32ROM.DATE_REG_VALUE: (ESP32ROM, ESP32Board),
+}
 
 
 def main(baud: int) -> Generator[MpyBoard, None, None]:
@@ -19,46 +24,33 @@ def main(baud: int) -> Generator[MpyBoard, None, None]:
             pass
 
 
-CHIP_CLASSES = {
-    ESP8266ROM.DATE_REG_VALUE: (ESP8266ROM, ESP8266Board),
-    ESP32ROM.DATE_REG_VALUE: (ESP32ROM, ESP32Board),
-}
-
-
-def list_ports() -> List[str]:
-    ports = [
-        it.device
-        for it in _list_ports.comports()
-        if "BLUE" not in it.device.upper()
-    ]
-    ports.sort(reverse=True)
-    return ports
+def list_ports() -> Generator[str]:
+    return (
+        it.device for it in _list_ports.comports() if "BLUE" not in it.device.upper()
+    )
 
 
 def detect_board(port: str, baud: int) -> MpyBoard:
-    board_cls: Type[MpyBoard]
-    rom_cls: Type[ESPLoader]
-
     loader = ESPLoader(port, baud)
     try:
         connect_attempt(loader)
         data_reg = loader.read_reg(ESPLoader.UART_DATA_REG_ADDR)
         rom_cls, board_cls = CHIP_CLASSES[data_reg]
-        esp = rom_cls(loader._port, loader._port.baudrate)
+        esp_rom = rom_cls(loader._port, loader._port.baudrate)
         try:
             return board_cls(
-                chip=esp.CHIP_NAME,
-                description=esp.get_chip_description(),
-                features=esp.get_chip_features(),
-                crystal_mhz=esp.get_crystal_freq(),
-                flash_size=detect_flash_size(esp),
-                mac=":".join(f"{it:02x}" for it in esp.read_mac()),
+                chip=esp_rom.CHIP_NAME,
+                description=esp_rom.get_chip_description(),
+                features=esp_rom.get_chip_features(),
+                crystal_mhz=esp_rom.get_crystal_freq(),
+                flash_size=detect_flash_size(esp_rom),
+                mac=":".join(f"{it:02x}" for it in esp_rom.read_mac()),
                 port=port,
                 baud=baud,
                 board_type="GENERIC",
             )
         finally:
-            esp.soft_reset(False)
+            esp_rom.soft_reset(False)
     finally:
         loader._port.close()
 
