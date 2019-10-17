@@ -1,4 +1,4 @@
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, field, fields, _create_fn
 from pathlib import Path
 from typing import List
 
@@ -11,7 +11,7 @@ BUILD_SCRIPTS = Path(__file__).parent.parent / "build_scripts"
 ESP_INIT_DATA_FILE = CACHE_DIR / "esp_init_data_default.bin"
 
 
-@dataclass(repr=False)
+@dataclass
 class MpyBoard:
     chip: str
     description: str
@@ -23,11 +23,11 @@ class MpyBoard:
     baud: int
     board_type: str
 
-    board_dir = None
-    build_dir = None
-    modules_dir = None
-    firmware_bin = None
-    docker_image = None
+    board_dir: Path = field(init=False, repr=False)
+    build_dir: Path = field(init=False, repr=False)
+    modules_dir: Path = field(init=False, repr=False)
+    firmware_bin: Path = field(init=False, repr=False)
+    docker_image: str = field(init=False, repr=False)
 
     esp_init_data_url = "https://github.com/espressif/ESP8266_AT/raw/master/bin/esp_init_data_default.bin"
 
@@ -55,15 +55,7 @@ class MpyBoard:
     def __str__(self):
         return f"{self.description} @ {self.port}"
 
-    def __repr__(self):
-        return (
-            f"{self.__class__.__qualname__}(\n    "
-            + "\n    ".join(f"{k} = {v!r}," for k, v in asdict(self).items())
-            + "\n)"
-        )
 
-
-@dataclass(repr=False)
 class ESP8266Board(MpyBoard):
     board_dir = MPY_REPO_DIR / "ports" / "esp8266"
     build_dir = board_dir / "build"
@@ -89,7 +81,6 @@ class ESP8266Board(MpyBoard):
         call(*self.esptool_args, "write_flash", "--verify", "0", firmware)
 
 
-@dataclass(repr=False)
 class ESP32Board(MpyBoard):
     board_dir = MPY_REPO_DIR / "ports" / "esp32"
     modules_dir = board_dir / "modules"
@@ -120,3 +111,21 @@ class ESP32Board(MpyBoard):
     def flash(self, firmware: Path):
         super().flash(firmware)
         call(*self.esptool_args, "write_flash", "--verify", "0x1000", firmware)
+
+
+# Inject a more pretty __repr__()
+setattr(
+    MpyBoard,
+    "__repr__",
+    _create_fn(
+        "__repr__",
+        ("self",),
+        [
+            'return f"""{self.__class__.__qualname__}(\n    '
+            + "\n    ".join(
+                f"{f.name}={{self.{f.name}!r}}," for f in fields(MpyBoard) if f.repr
+            )
+            + '\n)"""'
+        ],
+    ),
+)

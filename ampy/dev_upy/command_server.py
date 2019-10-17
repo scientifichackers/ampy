@@ -62,7 +62,7 @@ def handle_client(sock, addr):
 
             virtual_term.write_clients[addr] = f
             try:
-                result = func(addr, *req["args"])
+                result = func(addr[0], *req["args"])
             finally:
                 del virtual_term.write_clients[addr]
             print("req result:", result)

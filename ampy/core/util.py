@@ -2,9 +2,10 @@ import os
 import re
 import shutil
 import subprocess
+from contextlib import contextmanager
 from distutils.spawn import find_executable
 from pathlib import Path
-from typing import Dict, List, Any, Union
+from typing import Dict, List, Union, Tuple, Iterable
 
 from click import style
 
@@ -86,6 +87,33 @@ def call(cmd: str, *args, read_stdout=False, silent=False, **kwargs):
         return subprocess.check_output(arg, encoding="utf-8", **kwargs)
     else:
         return subprocess.check_call(arg, **kwargs)
+
+
+@contextmanager
+def clean_copy(*to_copy: Tuple[Path, Path]):
+    dest_paths = [it[1] for it in to_copy]
+    rm_r(dest_paths)
+    try:
+        for src, dest in to_copy:
+            print(f"Copying '{src}' -> '{dest}'...")
+            try:
+                shutil.copy(src, dest)
+            except IsADirectoryError:
+                shutil.copytree(src, dest)
+        yield
+    finally:
+        rm_r(dest_paths)
+
+
+def rm_r(paths: Iterable[Path]):
+    for path in paths:
+        print(f"Deleting '{path}'...")
+        try:
+            shutil.rmtree(path)
+        except FileNotFoundError:
+            pass
+        except NotADirectoryError:
+            path.unlink()
 
 
 if __name__ == "__main__":

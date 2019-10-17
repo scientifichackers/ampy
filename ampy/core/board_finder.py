@@ -3,6 +3,7 @@ from contextlib import redirect_stdout
 from typing import Generator, List, Type
 
 from esptool import ESPLoader, ESP8266ROM, ESP32ROM, DETECTED_FLASH_SIZES
+from serial import SerialException
 from serial.tools import list_ports as _list_ports
 
 from ampy.core.mpy_boards import MpyBoard, ESP8266Board, ESP32Board
@@ -12,6 +13,8 @@ def main(baud: int) -> Generator[MpyBoard, None, None]:
     for port in list_ports():
         try:
             yield detect_board(port, baud)
+        except SerialException:
+            pass
         except StopIteration:
             pass
 
@@ -26,7 +29,7 @@ def list_ports() -> List[str]:
     ports = [
         it.device
         for it in _list_ports.comports()
-        if "BLUETOOTH" not in it.device.upper()
+        if "BLUE" not in it.device.upper()
     ]
     ports.sort(reverse=True)
     return ports

@@ -1,3 +1,4 @@
+import inspect
 import shutil
 import sys
 from functools import update_wrapper
@@ -257,11 +258,11 @@ def run(script: str):
     The script must contain a main() function like so:
 
     \b
-        def main(addr):
+        def main(host):
             ...
 
-    where, addr is a 2-tuple (host: str, port: int),
-    the address of the computer sending the code, as seen by the board.
+    where, host is the hostname or IP address of
+    of the computer that sent the request, as visible from the board.
     """
     host = discovery_client.main()
     print("Found board @", host)

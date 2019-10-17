@@ -10,6 +10,11 @@ from ampy.dev_upy.settings import UINT_FMT, TCP_MAX_SIZE, UINT_SIZE, COMMANDS_PO
 
 @contextmanager  # type: ignore
 def main(host: str, cmd: str, *args: Any) -> ContextManager[io.BytesIO]:
+    """
+    Run a command with name :param:`cmd` on the board @ :param:`host` with :param:`args`.
+
+
+    """
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect((host, COMMANDS_PORT))
     sock.send(pack(json.dumps({"cmd": cmd, "args": args}).encode()))

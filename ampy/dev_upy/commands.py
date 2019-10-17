@@ -1,17 +1,27 @@
 from . import virtual_term
 
 
-def open_term(addr: tuple, port: int, mode: str):
-    virtual_term.add_client((addr[0], port), mode)
+def open_term(host: str, port: int, mode: str):
+    virtual_term.add_client((host, port), mode)
 
 
-def exec_func(addr: tuple, as_str: str):
-    res = {"result": None}
+def exec_func(host: str, main_fn: str, fn_args: tuple, fn_kwargs: dict):
+    response = {}
+
+    code = main_fn + "\nresponse['result'] = main(host, *fn_args, **fn_kwargs)"
+    locals = {
+        "response": response,
+        "host": host,
+        "fn_args": fn_args,
+        "fn_kwargs": fn_kwargs,
+    }
+
     try:
-        exec('%s\nres["result"] = main(%s)' % (as_str, repr(addr)), {"res": res})
+        exec(code, locals)
     except Exception as e:
-        res["status"] = "failed"
-        res["result"] = repr(e)
+        response["status"] = "failed"
+        response["result"] = repr(e)
     else:
-        res["status"] = "success"
-    return res
+        response["status"] = "success"
+
+    return response

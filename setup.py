@@ -31,6 +31,8 @@ REQUIRED = [
     "requests",
     "bullet",
     "halo",
+    "starlette",
+    "uvicorn",
 ]
 
 # What packages are optional?
