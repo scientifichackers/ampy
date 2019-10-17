@@ -38,7 +38,7 @@ class MpyBoard:
     def esptool_args(self):
         return "esptool.py", f"--chip={self.chip.lower()}", f"--port={self.port}"
 
-    def flash(self, firmware: Path):
+    def _setup_flash(self):
         call(*self.esptool_args, "erase_flash")
         if self.flash_size != "16MB":
             return
@@ -59,10 +59,10 @@ class MpyBoard:
 class ESP8266Board(MpyBoard):
     board_dir = MPY_REPO_DIR / "ports" / "esp8266"
     build_dir = board_dir / "build"
-    firmware_bin = build_dir / "firmware-combined.bin"
     modules_dir = board_dir / "modules"
-
+    firmware_bin = build_dir / "firmware-combined.bin"
     docker_image = "registry.gitlab.com/alelec/docker-esp-open-sdk"
+
     xtensa_path = "/tools/xtensa-lx106-elf"
     build_script = BUILD_SCRIPTS / "esp8266.sh"
 
@@ -77,7 +77,7 @@ class ESP8266Board(MpyBoard):
         )
 
     def flash(self, firmware: Path):
-        super().flash(firmware)
+        self._setup_flash()
         call(*self.esptool_args, "write_flash", "--verify", "0", firmware)
 
 
@@ -94,6 +94,7 @@ class ESP32Board(MpyBoard):
         return self.build_dir / "firmware.bin"
 
     docker_image = "registry.gitlab.com/alelec/docker-esp32-toolchain:{ESPIDF_SUPHASH}"
+
     esp_idf_path = "/esp"
     build_script = BUILD_SCRIPTS / "esp32.sh"
 
@@ -109,7 +110,7 @@ class ESP32Board(MpyBoard):
         )
 
     def flash(self, firmware: Path):
-        super().flash(firmware)
+        self._setup_flash()
         call(*self.esptool_args, "write_flash", "--verify", "0x1000", firmware)
 
 
