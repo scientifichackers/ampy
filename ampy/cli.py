@@ -2,7 +2,7 @@ import shutil
 import sys
 from functools import update_wrapper
 from pathlib import Path
-from typing import Optional, List, cast
+from typing import Optional, List
 
 import click
 import dotenv
@@ -54,9 +54,7 @@ def find_boards() -> List[board_finder.MpyBoard]:
     port = obj["port"]
     baud = obj["baud"]
 
-    with Halo(
-        text="Finding boards connected to your computer", spinner="dots"
-    ) as spinner:
+    with Halo(text="Finding boards connected to your computer.") as spinner:
         if port is not None:
             boards = [board_finder.detect_board(port, baud)]
         else:
@@ -117,8 +115,35 @@ def devices():
 
     Note: This will soft-reset all devices when run.
     """
-    for board in find_boards():
-        print(repr(board))
+    count = 0
+
+    with Halo(text="Finding boards connected to your computer.") as spinner:
+        obj = click.get_current_context().obj
+        baud = obj["baud"]
+        found = False
+        for board in board_finder.main(baud):
+            found = True
+            spinner.clear()
+            count += 1
+            print(f"({count}) {board!r}")
+        if not found:
+            spinner.fail(
+                click.style("No board is connected to your computer.", fg="red")
+            )
+            print(ESP32_FAIL_MSG)
+        else:
+            spinner.succeed()
+
+    with Halo(text="Finding boards on local network.") as spinner:
+        try:
+            for host in discovery_client.main():
+                spinner.clear()
+                count += 1
+                print(f"({count}) Remote board @ {host!r}")
+        except TimeoutError as e:
+            spinner.fail(str(e))
+        else:
+            spinner.succeed()
 
 
 @cli.add_command
@@ -244,6 +269,9 @@ def build(
         board.flash(firmware)
 
 
+stdout = sys.stdout.buffer
+
+
 @cli.add_command
 @click.command()
 @click.argument("script", type=click.Path(exists=True, dir_okay=False))
@@ -264,10 +292,12 @@ def run(script: str):
     where, host is the hostname or IP address of
     of the computer that sent the request, as visible from the board.
     """
-    host = discovery_client.main()
+    code = Path(script).read_text()
+
+    host = next(discovery_client.main())
     print("Found board @", host)
-    stdout = sys.stdout.buffer
-    with commands.exec_func(host, Path(script).read_text()) as f:
+
+    with commands.exec_func(host, code) as f:
         while True:
             b = f.read(1)
             if not b:
