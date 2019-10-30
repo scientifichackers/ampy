@@ -414,8 +414,7 @@ def reset(mode):
         # serial when restarted via microcontroller.reset()
         pass
 
-
-if __name__ == "__main__":
+def main():
     try:
         cli()
     finally:
@@ -428,3 +427,6 @@ if __name__ == "__main__":
                 # and shouldn't cause a new error or problem if the connection can't
                 # be closed.
                 pass
+
+if __name__ == "__main__":
+    main()
