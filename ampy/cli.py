@@ -100,9 +100,17 @@ def cli(port, baud, delay):
 
 
 @cli.command()
-@click.argument("remote_file")
+@click.option(
+    '--all',
+    is_flag=True,
+    required=False,
+    default=False,
+    help = '''Provides posibility to get all files from micropython device.
+Also receives one argument which is destination path and is optional'''
+)
+@click.argument("remote_file", default = "all")
 @click.argument("local_file", type=click.File("wb"), required=False)
-def get(remote_file, local_file):
+def get(all, remote_file, local_file):
     """
     Retrieve a file from the board.
 
@@ -120,15 +128,47 @@ def get(remote_file, local_file):
     Or to get main.py and save it as main.py locally run:
 
       ampy --port /board/serial/port get main.py main.py
+
+    Also to get all files to the current folder:
+
+      ampy --port /board/serial/port get --all
+
+    Or to the mentioned folder:
+
+      ampy --port /board/serial/port get --all ./destination/
     """
     # Get the file contents.
     board_files = files.Files(_board)
-    contents = board_files.get(remote_file)
-    # Print the file out if no local file was provided, otherwise save it.
-    if local_file is None:
-        print(contents.decode("utf-8"))
+    filelist = board_files.ls(long_format=False)
+
+    # When --all flag is set - the next argument is remote_file
+    # but will be used as a path to save files
+    if all:
+        if remote_file.endswith('/'):
+            destination_folder = remote_file
+        else:
+            destination_folder = remote_file + '/'
+        if not os.path.exists(destination_folder):
+            print('''Specified path doesn\'t exist. Files will be
+downloaded to current location''')
+            destination_folder = ''
     else:
-        local_file.write(contents)
+        destination_folder = ''
+
+    if all or remote_file == 'all':                     # download all files
+        for file in filelist:
+            contents = board_files.get(file)
+            file = file.replace('/', destination_folder)
+            with open(file, 'wb') as thefile:
+                thefile.write(contents)
+    else:                                               # download specified
+        contents = board_files.get(remote_file)
+        # Print the file out if no local file was provided, otherwise save it.
+        if local_file is None:
+            print(contents.decode("utf-8"))
+        else:
+            local_file.write(contents)
+
 
 
 @cli.command()
