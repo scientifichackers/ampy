@@ -305,8 +305,15 @@ def put(local, remote):
 
 
 @cli.command()
-@click.argument("remote_file")
-def rm(remote_file):
+@click.option(
+    '--all',
+    is_flag=True,
+    required=False,
+    default=False,
+    help = 'Provides posibility to remove all files from micropython device.'
+)
+@click.argument("remote_file", default = "all")
+def rm(all, remote_file):
     """Remove a file from the board.
 
     Remove the specified file from the board's filesystem.  Must specify one
@@ -317,11 +324,20 @@ def rm(remote_file):
     For example to delete main.py from the root of a board run:
 
       ampy --port /board/serial/port rm main.py
+
+    To delete all files and folders from the board:
+
+      ampy --port /board/serial/port rm --all
     """
     # Delete the provided file/directory on the board.
     board_files = files.Files(_board)
-    board_files.rm(remote_file)
+    filelist = board_files.ls(long_format=False)
 
+    if all or remote_file == 'all':                     # remove all files
+        for file in filelist:
+            board_files.rm(file)
+    else:                                               # remove specified
+        board_files.rm(remote_file)
 
 @cli.command()
 @click.option(
