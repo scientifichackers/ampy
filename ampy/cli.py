@@ -40,6 +40,7 @@ import ampy.pyboard as pyboard
 
 
 _board = None
+_verbose = False
 
 
 def windows_full_port_name(portname):
@@ -83,8 +84,17 @@ def windows_full_port_name(portname):
     help="Delay in seconds before entering RAW MODE (default 0). Can optionally specify with AMPY_DELAY environment variable.",
     metavar="DELAY",
 )
+@click.option(
+    "--verbose",
+    "-v",
+    envvar="AMPY_VERBOSE",
+    default=False,
+    is_flag=True,
+    help="Print messages to monitor the progress of the requested operation.",
+    metavar="VERBOSE",
+)
 @click.version_option()
-def cli(port, baud, delay):
+def cli(port, baud, delay, verbose):
     """ampy - Adafruit MicroPython Tool
 
     Ampy is a tool to control MicroPython boards over a serial connection.  Using
@@ -97,6 +107,9 @@ def cli(port, baud, delay):
     if platform.system() == "Windows":
         port = windows_full_port_name(port)
     _board = pyboard.Pyboard(port, baudrate=baud, rawdelay=delay)
+
+    _verbose = verbose
+    files.SetVerboseStatus(verbose)
 
 
 @cli.command()

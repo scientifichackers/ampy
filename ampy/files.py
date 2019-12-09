@@ -29,6 +29,12 @@ from ampy.pyboard import PyboardError
 BUFFER_SIZE = 32  # Amount of data to read or write to the serial port at a time.
 # This is kept small because small chips and USB to serial
 # bridges usually have very small buffers.
+_verbose = False
+
+
+def SetVerboseStatus(verbose = False):
+    global _verbose
+    _verbose = verbose
 
 
 class DirectoryExistsError(Exception):
@@ -71,6 +77,8 @@ class Files(object):
         )
         self._pyboard.enter_raw_repl()
         try:
+            if(_verbose):
+                print ("Getting file: " + filename)
             out = self._pyboard.exec_(textwrap.dedent(command))
         except PyboardError as ex:
             # Check if this is an OSError #2, i.e. file doesn't exist and
@@ -104,7 +112,7 @@ class Files(object):
             directory = "/" + directory
 
         command = """\
-                try:        
+                try:
                     import os
                 except ImportError:
                     import uos as os\n"""
@@ -118,10 +126,10 @@ class Files(object):
                         try:
                             # if its a directory, then it should provide some children.
                             children = os.listdir(dir_or_file)
-                        except OSError:                        
+                        except OSError:
                             # probably a file. run stat() to confirm.
                             os.stat(dir_or_file)
-                            result.add(dir_or_file) 
+                            result.add(dir_or_file)
                         else:
                             # probably a directory, add to result if empty.
                             if children:
@@ -132,17 +140,17 @@ class Files(object):
                                         next = dir_or_file + child
                                     else:
                                         next = dir_or_file + '/' + child
-                                    
+
                                     _listdir(next)
                             else:
-                                result.add(dir_or_file)                     
+                                result.add(dir_or_file)
 
                     _listdir(directory)
                     return sorted(result)\n"""
         else:
             command += """\
                 def listdir(directory):
-                    if directory == '/':                
+                    if directory == '/':
                         return sorted([directory + f for f in os.listdir(directory)])
                     else:
                         return sorted([directory + '/' + f for f in os.listdir(directory)])\n"""
@@ -152,7 +160,7 @@ class Files(object):
             command += """
                 r = []
                 for f in listdir('{0}'):
-                    size = os.stat(f)[6]                    
+                    size = os.stat(f)[6]
                     r.append('{{0}} - {{1}} bytes'.format(f, size))
                 print(r)
             """.format(
@@ -194,10 +202,14 @@ class Files(object):
         )
         self._pyboard.enter_raw_repl()
         try:
+            if(_verbose):
+                print ("Creating directory: " + directory)
             out = self._pyboard.exec_(textwrap.dedent(command))
         except PyboardError as ex:
             # Check if this is an OSError #17, i.e. directory already exists.
             if ex.args[2].decode("utf-8").find("OSError: [Errno 17] EEXIST") != -1:
+                if(_verbose):
+                    print("  Directory already exists")
                 if not exists_okay:
                     raise DirectoryExistsError(
                         "Directory already exists: {0}".format(directory)
@@ -210,6 +222,8 @@ class Files(object):
         """Create or update the specified file with the provided data.
         """
         # Open the file for writing on the board and write chunks of data.
+        if(_verbose):
+            print ("Putting file: " + filename)
         self._pyboard.enter_raw_repl()
         self._pyboard.exec_("f = open('{0}', 'wb')".format(filename))
         size = len(data)
@@ -237,6 +251,8 @@ class Files(object):
         )
         self._pyboard.enter_raw_repl()
         try:
+            if(_verbose):
+                print ("Deleting file: " + filename),
             out = self._pyboard.exec_(textwrap.dedent(command))
         except PyboardError as ex:
             message = ex.args[2].decode("utf-8")
@@ -284,6 +300,8 @@ class Files(object):
         )
         self._pyboard.enter_raw_repl()
         try:
+            if(_verbose):
+                print ("Deleting directory: " + directory)
             out = self._pyboard.exec_(textwrap.dedent(command))
         except PyboardError as ex:
             message = ex.args[2].decode("utf-8")
@@ -298,11 +316,13 @@ class Files(object):
 
     def run(self, filename, wait_output=True):
         """Run the provided script and return its output.  If wait_output is True
-        (default) then wait for the script to finish and then print its output,
+        (default) then wait for the script to finish and then  its output,
         otherwise just run the script and don't wait for any output.
         """
         self._pyboard.enter_raw_repl()
         out = None
+        if(_verbose):
+            print("About to run: " + filename)
         if wait_output:
             # Run the file and wait for output to return.
             out = self._pyboard.execfile(filename)
