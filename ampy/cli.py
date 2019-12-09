@@ -238,7 +238,7 @@ def put(local, remote):
         # Directory copy, create the directory and walk all children to copy
         # over the files.
         board_files = files.Files(_board)
-        for parent, child_dirs, child_files in os.walk(local):
+        for parent, child_dirs, child_files in os.walk(local, followlinks=True):
             # Create board filesystem absolute path to parent directory.
             remote_parent = posixpath.normpath(
                 posixpath.join(remote, os.path.relpath(parent, local))
