@@ -78,7 +78,7 @@ class Files(object):
         self._pyboard.enter_raw_repl()
         try:
             if(_verbose):
-                print ("Getting file: " + filename)
+                print("Getting file: " + filename)
             out = self._pyboard.exec_(textwrap.dedent(command))
         except PyboardError as ex:
             # Check if this is an OSError #2, i.e. file doesn't exist and
@@ -203,7 +203,7 @@ class Files(object):
         self._pyboard.enter_raw_repl()
         try:
             if(_verbose):
-                print ("Creating directory: " + directory)
+                print("Creating directory: " + directory)
             out = self._pyboard.exec_(textwrap.dedent(command))
         except PyboardError as ex:
             # Check if this is an OSError #17, i.e. directory already exists.
@@ -223,7 +223,7 @@ class Files(object):
         """
         # Open the file for writing on the board and write chunks of data.
         if(_verbose):
-            print ("Putting file: " + filename)
+            print("Putting file: " + filename)
         self._pyboard.enter_raw_repl()
         self._pyboard.exec_("f = open('{0}', 'wb')".format(filename))
         size = len(data)
@@ -252,7 +252,7 @@ class Files(object):
         self._pyboard.enter_raw_repl()
         try:
             if(_verbose):
-                print ("Deleting file: " + filename),
+                print("Deleting file: " + filename),
             out = self._pyboard.exec_(textwrap.dedent(command))
         except PyboardError as ex:
             message = ex.args[2].decode("utf-8")
@@ -301,7 +301,7 @@ class Files(object):
         self._pyboard.enter_raw_repl()
         try:
             if(_verbose):
-                print ("Deleting directory: " + directory)
+                print("Deleting directory: " + directory)
             out = self._pyboard.exec_(textwrap.dedent(command))
         except PyboardError as ex:
             message = ex.args[2].decode("utf-8")
