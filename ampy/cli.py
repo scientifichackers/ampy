@@ -408,7 +408,7 @@ def reset(mode):
         return
 
     try:
-        _board.exec_("reset()")
+        _board.exec_raw_no_follow("reset()")
     except serial.serialutil.SerialException as e:
         # An error is expected to occur, as the board should disconnect from
         # serial when restarted via microcontroller.reset()
