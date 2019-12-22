@@ -177,7 +177,11 @@ class Pyboard:
         if _rawdelay > 0:
             time.sleep(_rawdelay)
 
-        self.serial.write(b'\r\x03\x03') # ctrl-C twice: interrupt any running program
+        # ctrl-C twice: interrupt any running program
+        self.serial.write(b'\r\x03')
+        time.sleep(0.1)
+        self.serial.write(b'\x03')
+        time.sleep(0.1)
 
         # flush input (without relying on serial.flushInput())
         n = self.serial.inWaiting()
