@@ -324,7 +324,7 @@ def run(local_file, no_output):
     option.  This will run the script and immediately exit without waiting for
     the script to finish and print output.
 
-    For example to run a test.py script and print any output after it finishes:
+    For example to run a test.py script and print any output until it finishes:
 
       ampy --port /board/serial/port run test.py
 
@@ -335,7 +335,7 @@ def run(local_file, no_output):
     # Run the provided file and print its output.
     board_files = files.Files(_board)
     try:
-        output = board_files.run(local_file, not no_output)
+        output = board_files.run(local_file, not no_output, not no_output)
         if output is not None:
             print(output.decode("utf-8"), end="")
     except IOError:
