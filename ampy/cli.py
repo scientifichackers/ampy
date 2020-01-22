@@ -1,30 +1,30 @@
 import shutil
 import sys
-from functools import update_wrapper
 from pathlib import Path
+from pprint import pformat, pprint
 from typing import Optional, List
 
 import click
 import dotenv
 import serial
-from bullet import Bullet, Check
+from click import style
 from halo import Halo
 
 from ampy.core import board_finder, firmware_builder
 from ampy.core.settings import DEV_MODULE, MPY_REPO_DIR
 from ampy.core.util import clean_mpy_repo, update_mpy_repo
 from ampy.dev import discovery_client, commands
+from .cli_util import (
+    pass_dev_board,
+    pass_many_boards,
+    pass_single_board,
+    FINDING_USB_BOARDS_MSG,
+    ESP32_FAIL_MSG,
+    DEV_FIRMWARE_NOTE,
+    get_params,
+)
 
-ESP32_FAIL_MSG = """\
-\tNote: If you're using an ESP32, you may need to hold down the 'BOOT' button on your device while runing this command.
-\t      Read more @ https://randomnerdtutorials.com/solved-failed-to-connect-to-esp32-timed-out-waiting-for-packet-header/\
-"""
-
-# Load AMPY_PORT et al from ~/.ampy file
-# Performed here because we need to beat click's decorators.
-config = dotenv.find_dotenv(filename=".ampy", usecwd=True)
-if config:
-    dotenv.load_dotenv(dotenv_path=config)
+stdout = sys.stdout.buffer
 
 
 @click.group()
@@ -49,77 +49,19 @@ def cli(ctx: click.Context, port: Optional[str], baud: int):
     ctx.obj = {"port": port, "baud": baud}
 
 
-def find_boards() -> List[board_finder.MpyBoard]:
-    obj = click.get_current_context().obj
-    port = obj["port"]
-    baud = obj["baud"]
-
-    with Halo(text="Finding boards connected to your computer.") as spinner:
-        if port is not None:
-            boards = [board_finder.detect_board(port, baud)]
-        else:
-            boards = list(board_finder.main(baud))
-
-        if not boards:
-            spinner.fail(click.style("No boards detected!", fg="red"))
-            print(ESP32_FAIL_MSG)
-            exit(1)
-        spinner.succeed()
-
-    return boards
-
-
-def pass_many_boards(f):
-    def new_func(*args, **kwargs):
-        boards = find_boards()
-
-        if len(boards) > 1:
-            choices = {str(it): it for it in boards}
-            boards = [
-                choices[it]
-                for it in Check(
-                    prompt="Please choose any number of boards you want",
-                    choices=list(choices.keys()),
-                ).launch()
-            ]
-
-        f(boards, *args, **kwargs)
-
-    return update_wrapper(new_func, f)
-
-
-def pass_single_board(f):
-    def new_func(*args, **kwargs):
-        boards = find_boards()
-
-        if len(boards) > 1:
-            choices = {str(it): it for it in boards}
-            board = choices[
-                Bullet(
-                    prompt="Please choose a single board", choices=list(choices.keys())
-                ).launch()
-            ]
-        else:
-            board = boards[0]
-
-        f(board, *args, **kwargs)
-
-    return update_wrapper(new_func, f)
-
-
 @cli.add_command
 @click.command()
 def devices():
     """
-    List all micropython boards attached via USB serial port.
+    List all micropython devices attached via USB serial port, or via the same network.
 
-    Note: This will soft-reset all devices when run.
+    Note: This will hard-reset the board when run.
     """
     count = 0
 
-    with Halo(text="Finding boards connected to your computer.") as spinner:
-        obj = click.get_current_context().obj
-        baud = obj["baud"]
+    with Halo(text=FINDING_USB_BOARDS_MSG) as spinner:
+        params = get_params()
+        baud = params["baud"]
         found = False
         for board in board_finder.main(baud):
             found = True
@@ -151,14 +93,16 @@ def devices():
 @pass_single_board
 def logs(board: board_finder.MpyBoard):
     """
-    Stream logs from device, through serial connection.
+    Stream logs from device, over USB serial connection.
+
+    Note: This will hard-reset the board when run.
     """
     print(f"Streaming output for: {board}.\n" f"You may need to reset the device once.")
     with serial.Serial(board.port, baudrate=board.baud) as ser:
         ser.flush()
         while True:
-            sys.stdout.buffer.write(ser.read(1))
-            sys.stdout.buffer.flush()
+            stdout.write(ser.read(1))
+            stdout.flush()
 
 
 @cli.add_command
@@ -185,7 +129,9 @@ def flash(boards: List[board_finder.MpyBoard], firmware: str):
     required=True,
     default="master",
 )
-@click.option("--dev", "-d", is_flag=True, is_eager=True)
+@click.option(
+    "--dev", "-d", is_flag=True, is_eager=True, help='Flash the development firmware.'
+)
 @click.option("--offline", is_flag=True, help="Offline mode.")
 @click.option(
     "--module",
@@ -269,42 +215,128 @@ def build(
         board.flash(firmware)
 
 
-stdout = sys.stdout.buffer
+@cli.add_command
+@click.command(
+    help=f"""
+Remotely execute code on a board.
+
+This finds a board on network, runs the provided SCRIPT on it. s
+
+The output from the board is also streamed over TCP.
+
+{DEV_FIRMWARE_NOTE}
+    """
+)
+@click.argument("script", type=click.Path(exists=True, dir_okay=False))
+@pass_dev_board
+def exec(dev_board: str, script: str):
+    code = Path(script).read_text()
+
+    with Halo(text="Sending code to board") as spinner:
+        res, f = commands.exec_code(dev_board, code)
+        try:
+            if res["status"] == "failed":
+                spinner.fail(click.style(f"That didn't work! ({res})", fg='red'))
+                exit(1)
+
+            spinner.succeed("Sent code. Now streaming logs...")
+
+            while True:
+                b = f.recv(1024)
+                if not b:
+                    return
+                stdout.write(b)
+                stdout.flush()
+        finally:
+            f.close()
 
 
 @cli.add_command
-@click.command()
-@click.argument("script", type=click.Path(exists=True, dir_okay=False))
-def run(script: str):
+@click.command(
+    help=f"""\
+Remotely configure a micropython board.
+
+{style('STA_IF', bold=True, bg='black', fg='green')}
+
+Passing --sta-ssid will enable STA_IF \
+i.e., connect to the specified SSID. \
+--sta-password can be also be specified.
+
+{style('AP_IF', bold=True, bg='black', fg='blue')}
+
+Passing --disable-ap will disable AP_IF \
+i.e., turn off the board's own WiFi hotspot.
+
+If --ap-password is not specified, \
+then AUTH_OPEN will be used, otherwise AUTH_WPA_WPA2_PSK is used.   
+
+If --ap-ssid is not specified, \
+this will use the default SSID and Password. \
+Default AP SSID is unique to the board, \
+and Password is "micropythoN" (note the upper-case N).
+
+Read more @ https://docs.micropython.org/en/latest/esp8266/tutorial/intro.html#wifi.
+
+{style('TIMER', bold=True, bg='black', fg='yellow')}
+
+The ampy dev firmware needs a micropython Timer for background tasks. \
+It uses the Timer with id 0 by default. \
+
+If your application depends this, \
+then you can explicitly specify a different Timer id that ampy should use.
+
+{DEV_FIRMWARE_NOTE}
     """
-    Remotely execute code on a board.
-
-    This will first, try to find a board on the network,
-    and then send the contents of the provided script.
-    The board will then, stream the output from the script.
-
-    The script must contain a main() function like so:
-
-    \b
-        def main(host):
-            ...
-
-    where, host is the hostname or IP address of
-    of the computer that sent the request, as visible from the board.
-    """
-    code = Path(script).read_text()
-
-    host = next(discovery_client.main())
-    print("Found board @", host)
-
-    with commands.exec_func(host, code) as f:
-        while True:
-            b = f.read(1)
-            if not b:
-                return
-            stdout.write(b)
-            stdout.flush()
+)
+@click.option(
+    '--sta-ssid',
+    envvar='AMPY_STA_SSID',
+    help='SSID of WiFi network the board should connect to.',
+)
+@click.option(
+    '--sta-password',
+    envvar='AMPY_STA_PASSWORD',
+    help='Password of WiFi network the board should connect to.',
+)
+@click.option(
+    '--ap-ssid',
+    envvar='AMPY_AP_SSID',
+    help="SSID for the board's own WiFi access point.",
+)
+@click.option(
+    '--ap-password',
+    envvar='AMPY_AP_PASSWORD',
+    help="Password for the board's own WiFi access point.",
+)
+@click.option(
+    '--disable-ap',
+    is_flag=True,
+    envvar='AMPY_DISABLE_AP',
+    help="Disable the board's own WiFi access point.",
+)
+@click.option(
+    '--timer-id',
+    envvar='AMPY_TIMERS',
+    help='Timer id that ampy to use for background tasks.',
+    default=0,
+    type=int,
+)
+@click.option('--yes', '-y', is_flag=True, help="Don't ask for confirmation.")
+@pass_dev_board
+def config(dev_board: str, **kwargs):
+    pprint(kwargs)
+    if not click.confirm('Write this config to the board?'):
+        raise click.Abort()
+    conf = commands.update_config(dev_board, kwargs)['result']
+    print(f'Updated config: {pformat(conf)}')
+    commands.reset(dev_board)
 
 
 if __name__ == "__main__":
+    # Load AMPY_PORT et al from ~/.ampy file
+    # Performed here because we need to beat click's decorators.
+    config = dotenv.find_dotenv(filename=".ampy", usecwd=True)
+    if config:
+        dotenv.load_dotenv(dotenv_path=config)
+
     cli()

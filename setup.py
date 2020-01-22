@@ -33,6 +33,7 @@ REQUIRED = [
     "halo",
     "starlette",
     "uvicorn",
+    "jupyter",
 ]
 
 # What packages are optional?

@@ -1,15 +1,39 @@
-import io
-from typing import ContextManager
+import socket
+from typing import Tuple, Optional
 
+from ampy.dev_upy import settings
 from . import command_client
 
 
-def exec_func(host: str, main_fn: str, *fn_args, **fn_kwargs) -> ContextManager[io.BytesIO]:
+def exec_func(host: str, main_fn: str, *fn_args, **fn_kwargs) -> dict:
     return command_client.main(host, "exec_func", main_fn, fn_args, fn_kwargs)
 
 
-def open_term(host: str, mode: str = "rw") -> ContextManager[io.BytesIO]:
-    return command_client.main(host, "open_term", mode)
+def send_ctrl_c(host: str) -> dict:
+    return command_client.main(host, "send_ctrl_c")
 
 
-# def download_user_code(host: str, code: str) -> ContextManager[io.BytesIO]:
+def update_config(host: str, config: dict) -> dict:
+    return command_client.main(host, 'update_config', config)
+
+
+def reset(host: str, hard: bool = False):
+    return command_client.main(host, 'reset', hard)
+
+
+def exec_code(
+    host: str, src: str, *, silent: bool = False
+) -> Tuple[dict, Optional[socket.socket]]:
+    port = None
+
+    if not silent:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.bind((settings.LOCAL_HOST, 0))
+        sock.listen()
+        port = sock.getsockname()[1]
+
+    response = command_client.main(host, "exec_code", src, port)
+    if silent:
+        return response, None
+    else:
+        return response, sock.accept()[0]

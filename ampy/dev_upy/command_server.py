@@ -3,23 +3,18 @@ import json
 import socket
 import struct
 
-from . import virtual_term
 from . import commands
-from .settings import (
-    MAX_TCP_CONNECTIONS,
-    TCP_MAX_SIZE,
-    UINT_FMT,
-    UINT_SIZE,
-    COMMANDS_PORT,
-    LOCAL_HOST,
-)
+from . import settings
 
 
 def main():
+    # bind a non-blocking TCP socket to LOCAL_HOST:DISCOVERY_PORT
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.bind((LOCAL_HOST, COMMANDS_PORT))
-    sock.listen(MAX_TCP_CONNECTIONS)
+    sock.bind((settings.LOCAL_HOST, settings.COMMANDS_PORT))
+    sock.listen(settings.MAX_TCP_CONNECTIONS)
     sock.setblocking(False)
+
+    mem = memoryview(bytearray(settings.TCP_MAX_SIZE))
 
     def poll(_):
         try:
@@ -30,49 +25,40 @@ def main():
         else:
             handle_client(*client)
 
-    return poll
-
-
-_data_mv = memoryview(bytearray(TCP_MAX_SIZE))
-
-
-def handle_client(sock, addr):
-    print("recv conn:", sock, addr)
-    success_result = json.dumps({"status": "success"}).encode()
-
-    try:
-        sock.setblocking(True)
-        f = sock.makefile()
+    def handle_client(conn, addr):
+        f = conn.makefile()
         try:
-            # read the first UINT_SIZE to determine the size of payload
-            size_buf = f.read(UINT_SIZE)
-            size = struct.unpack(UINT_FMT, size_buf)[0]
+            conn.setblocking(True)
+            # read the first 'UINT_SIZE' bytes to determine the size of payload
+            size_buf = f.read(settings.UINT_SIZE)
+            size = struct.unpack(settings.UINT_FMT, size_buf)[0]
 
-            # don't accept payload that's too large
-            if size > len(_data_mv):
+            # don't accept a payload that's too large
+            if size > len(mem):
                 return
 
             # read the payload into the memoryview, and json-decode it
-            f.readinto(_data_mv, size)
-            req = json.loads(_data_mv[:size])
-            print("recv req:", addr, req)
+            f.readinto(mem, size)
+            req = json.loads(mem[:size])
+            print("[ampy] recv:", addr, req)
 
-            # dynamic dispatch, for calling a function defined in the "commands" module
-            func = getattr(commands, req["cmd"])
+            # use dynamic dispatch,
+            # for calling the function whose name is available in the request
+            cmd = getattr(commands, req["cmd"])
 
-            virtual_term.write_clients[addr] = f
+            reply = {"status": "success"}
             try:
-                result = func(addr[0], *req["args"])
-            finally:
-                del virtual_term.write_clients[addr]
-            print("req result:", result)
+                # call the command, with the hostname,
+                # and positional arguments provided in the request
+                reply["result"] = cmd(addr[0], *req["args"])
+            except Exception as e:
+                reply["status"] = "failed"
+                reply["result"] = repr(e)
 
-            if result is None:
-                result = success_result
-            else:
-                result = json.dumps(result).encode()
-            f.write(result)
+            f.write(json.dumps(reply).encode())
+            print("[ampy] sent:", addr, reply)
         finally:
+            conn.close()
             f.close()
-    finally:
-        sock.close()
+
+    return poll

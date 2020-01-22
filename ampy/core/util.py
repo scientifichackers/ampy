@@ -13,7 +13,9 @@ from ampy.core.settings import MPY_REPO_DIR
 
 MPY_REPO_URL = "https://github.com/micropython/micropython.git"
 ESP32_MAKEFILE_PATH = MPY_REPO_DIR / "ports" / "esp32" / "Makefile"
-ESPIDF_SUPHASH_REGEX = re.compile("(ESPIDF_SUPHASH_V3)(\s+)(:=)(\s+)([A-z0-9]+)")
+ESPIDF_SUPHASH_REGEX = re.compile(
+    r"(ESPIDF_SUPHASH_V4|ESPIDF_SUPHASH)(\s+)(:=)(\s+)([A-z0-9]+)"
+)
 DOCKER_HOME = "/root"
 
 
@@ -74,9 +76,8 @@ def shell(cmd: str, *args, **kwargs):
     call(cmd, *args, **kwargs, shell=True)
 
 
-def call(cmd: str, *args, read_stdout=False, silent=False, **kwargs):
-    if not silent:
-        print(style(f"$ {cmd} {' '.join(map(str, args))}", fg="yellow"))
+def call(cmd: str, *args, read_stdout=False, **kwargs):
+    print(style(f"$ {cmd} {' '.join(map(str, args))}", fg="yellow"))
 
     arg: Union[List[str], str]
     if kwargs.get("shell", False):

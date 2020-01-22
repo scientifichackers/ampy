@@ -30,4 +30,4 @@ def main(timeout: float = 5, bcast_hz: float = 50) -> Generator[str, None, None]
 
     if not found:
         end = time()
-        raise TimeoutError(f"No board found on local network after {end - start:.3f}s.")
+        raise TimeoutError(f"No board found on local network after {end - start:.1f}s.")

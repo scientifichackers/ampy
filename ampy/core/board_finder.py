@@ -1,4 +1,5 @@
 import os
+import typing as T
 from contextlib import redirect_stdout
 from typing import Generator, Iterable
 
@@ -34,9 +35,13 @@ def detect_board(port: str, baud: int) -> MpyBoard:
     loader = ESPLoader(port, baud)
     try:
         connect_attempt(loader)
+
         data_reg = loader.read_reg(ESPLoader.UART_DATA_REG_ADDR)
         rom_cls, board_cls = CHIP_CLASSES[data_reg]
-        esp_rom = rom_cls(loader._port, loader._port.baudrate)
+        esp_rom: T.Union[ESP8266ROM, ESP32ROM] = rom_cls(
+            loader._port, loader._port.baudrate
+        )
+
         try:
             return board_cls(
                 chip=esp_rom.CHIP_NAME,
@@ -50,7 +55,7 @@ def detect_board(port: str, baud: int) -> MpyBoard:
                 board_type="GENERIC",
             )
         finally:
-            esp_rom.soft_reset(False)
+            esp_rom.hard_reset()
     finally:
         loader._port.close()
 

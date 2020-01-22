@@ -1,27 +1,56 @@
-from . import virtual_term
+import socket
+import sys
 
+import machine
 
-def open_term(host: str, port: int, mode: str):
-    virtual_term.add_client((host, port), mode)
+from . import config
+from .remote_term import RemoteTerm
+from .repl_man import ReplMan
 
 
 def exec_func(host: str, main_fn: str, fn_args: tuple, fn_kwargs: dict):
-    response = {}
+    # code called inside exec() can't modify variables, but can mutate them.
+    # So just use a dict to store the output of the main() function.
+    result = {"value": None}
 
-    code = main_fn + "\nresponse['result'] = main(host, *fn_args, **fn_kwargs)"
+    code = main_fn + "\nresult['value'] = main(host, *fn_args, **fn_kwargs)"
     locals = {
-        "response": response,
+        "result": result,
         "host": host,
         "fn_args": fn_args,
         "fn_kwargs": fn_kwargs,
     }
 
-    try:
-        exec(code, locals)
-    except Exception as e:
-        response["status"] = "failed"
-        response["result"] = repr(e)
-    else:
-        response["status"] = "success"
+    exec(code, locals)
+    return result["value"]
 
-    return response
+
+def send_ctrl_c(_):
+    RemoteTerm.get_instance().send_ctrl_c()
+
+
+def update_config(_, conf: dict) -> dict:
+    config.conf = conf
+    config.store()
+    return config.conf
+
+
+def reset(_, hard: bool = False):
+    if hard:
+        sys.exit()
+    else:
+        machine.reset()
+
+
+def exec_code(host: str, src: str, port: int):
+    repl = ReplMan.get_instance()
+
+    if port is None:
+        conn = None
+    else:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        addr = (host, port)
+        sock.connect(addr)
+        conn = addr, sock
+
+    repl.mode = repl.get_exec_code_mode(src, conn)
