@@ -1,3 +1,5 @@
+ampy/ipy_kernel/*.ipynb
+.mypy_cache
 .idea
 .venv
 .DS_Store
