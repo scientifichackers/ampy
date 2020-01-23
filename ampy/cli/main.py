@@ -1,10 +1,10 @@
-from typing import Optional
+import typing as T
 
 import click
+import dotenv
 
 
 def main():
-    import dotenv
 
     # Load AMPY_PORT et al from ~/.ampy file
     # Performed here because we need to beat click's decorators.
@@ -32,5 +32,5 @@ def main():
     "Can be optionally specified with 'AMPY_BAUD' environment variable.",
 )
 @click.pass_context
-def cli(ctx: click.Context, port: Optional[str], baud: int):
+def cli(ctx: click.Context, port: T.Optional[str], baud: int):
     ctx.obj = {"port": port, "baud": baud}
