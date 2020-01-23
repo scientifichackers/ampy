@@ -29,6 +29,12 @@ def send_ctrl_c(_):
     RemoteTerm.get_instance().send_ctrl_c()
 
 
+def get_config(_, conf: dict) -> dict:
+    config.conf = conf
+    config.store()
+    return config.conf
+
+
 def update_config(_, conf: dict) -> dict:
     config.conf = conf
     config.store()

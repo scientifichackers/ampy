@@ -32,7 +32,6 @@ stdout = sys.stdout.buffer
     "--port",
     "-p",
     envvar="AMPY_PORT",
-    required=False,
     help="Name of serial port for connected board.\n\n"
     "Can be optionally specified with 'AMPY_PORT' environment variable.",
 )
@@ -51,41 +50,54 @@ def cli(ctx: click.Context, port: Optional[str], baud: int):
 
 @cli.add_command
 @click.command()
-def devices():
+@click.option('-u', '--usb', is_flag=True)
+@click.option('-n', '--net', is_flag=True)
+@click.option(
+    '-t', '--timeout', default=5.0, help='Timeout in seconds for network scan.'
+)
+def devices(usb: bool, net: bool, timeout: float):
     """
     List all micropython devices attached via USB serial port, or via the same network.
+
+    By default this will scan both USB serial ports and the network,
+    unless either --usb or --net is explicitly specified.
 
     Note: This will hard-reset the board when run.
     """
     count = 0
 
-    with Halo(text=FINDING_USB_BOARDS_MSG) as spinner:
-        params = get_params()
-        baud = params["baud"]
-        found = False
-        for board in board_finder.main(baud):
-            found = True
-            spinner.clear()
-            count += 1
-            print(f"({count}) {board!r}")
-        if not found:
-            spinner.fail(
-                click.style("No board is connected to your computer.", fg="red")
-            )
-            print(ESP32_FAIL_MSG)
-        else:
-            spinner.succeed()
+    if not (usb or net):
+        usb = net = True
 
-    with Halo(text="Finding boards on local network.") as spinner:
-        try:
-            for host in discovery_client.main():
+    if net:
+        with Halo(text="Finding boards on local network.") as spinner:
+            try:
+                for host in discovery_client.main(timeout=timeout):
+                    spinner.clear()
+                    count += 1
+                    print(f"({count}) Remote board @ {host!r}")
+            except TimeoutError as e:
+                spinner.fail(str(e))
+            else:
+                spinner.succeed()
+
+    if usb:
+        with Halo(text=FINDING_USB_BOARDS_MSG) as spinner:
+            params = get_params()
+            baud = params["baud"]
+            found = False
+            for board in board_finder.main(baud):
+                found = True
                 spinner.clear()
                 count += 1
-                print(f"({count}) Remote board @ {host!r}")
-        except TimeoutError as e:
-            spinner.fail(str(e))
-        else:
-            spinner.succeed()
+                print(f"({count}) {board!r}")
+            if not found:
+                spinner.fail(
+                    click.style("No board is connected to your computer.", fg="red")
+                )
+                print(ESP32_FAIL_MSG)
+            else:
+                spinner.succeed()
 
 
 @cli.add_command
@@ -328,7 +340,7 @@ def config(dev_board: str, **kwargs):
     if not click.confirm('Write this config to the board?'):
         raise click.Abort()
     conf = commands.update_config(dev_board, kwargs)['result']
-    print(f'Updated config: {pformat(conf)}')
+    print(f'Updated config:\n{pformat(conf)}')
     commands.reset(dev_board)
 
 

@@ -6,19 +6,23 @@ from . import command_client
 
 
 def exec_func(host: str, main_fn: str, *fn_args, **fn_kwargs) -> dict:
-    return command_client.main(host, "exec_func", main_fn, fn_args, fn_kwargs)
+    return command_client.send_recv(host, "exec_func", main_fn, fn_args, fn_kwargs)
 
 
 def send_ctrl_c(host: str) -> dict:
-    return command_client.main(host, "send_ctrl_c")
+    return command_client.send_recv(host, "send_ctrl_c")
+
+
+def get_config(host: str, config: dict) -> dict:
+    return command_client.send_recv(host, 'get_config', config)
 
 
 def update_config(host: str, config: dict) -> dict:
-    return command_client.main(host, 'update_config', config)
+    return command_client.send_recv(host, 'update_config', config)
 
 
 def reset(host: str, hard: bool = False):
-    return command_client.main(host, 'reset', hard)
+    command_client.send(host, 'reset', hard)
 
 
 def exec_code(
@@ -32,7 +36,7 @@ def exec_code(
         sock.listen()
         port = sock.getsockname()[1]
 
-    response = command_client.main(host, "exec_code", src, port)
+    response = command_client.send_recv(host, "exec_code", src, port)
     if silent:
         return response, None
     else:
