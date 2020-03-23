@@ -22,8 +22,12 @@
 import ast
 import textwrap
 import binascii
+import logging
 
 from ampy.pyboard import PyboardError
+
+
+logger = logging.getLogger("ampy")
 
 
 BUFFER_SIZE = 32  # Amount of data to read or write to the serial port at a time.
@@ -71,6 +75,7 @@ class Files(object):
         )
         self._pyboard.enter_raw_repl()
         try:
+            logger.debug("Getting file: " + filename)
             out = self._pyboard.exec_(textwrap.dedent(command))
         except PyboardError as ex:
             # Check if this is an OSError #2, i.e. file doesn't exist and
@@ -104,7 +109,7 @@ class Files(object):
             directory = "/" + directory
 
         command = """\
-                try:        
+                try:
                     import os
                 except ImportError:
                     import uos as os\n"""
@@ -118,10 +123,10 @@ class Files(object):
                         try:
                             # if its a directory, then it should provide some children.
                             children = os.listdir(dir_or_file)
-                        except OSError:                        
+                        except OSError:
                             # probably a file. run stat() to confirm.
                             os.stat(dir_or_file)
-                            result.add(dir_or_file) 
+                            result.add(dir_or_file)
                         else:
                             # probably a directory, add to result if empty.
                             if children:
@@ -132,17 +137,17 @@ class Files(object):
                                         next = dir_or_file + child
                                     else:
                                         next = dir_or_file + '/' + child
-                                    
+
                                     _listdir(next)
                             else:
-                                result.add(dir_or_file)                     
+                                result.add(dir_or_file)
 
                     _listdir(directory)
                     return sorted(result)\n"""
         else:
             command += """\
                 def listdir(directory):
-                    if directory == '/':                
+                    if directory == '/':
                         return sorted([directory + f for f in os.listdir(directory)])
                     else:
                         return sorted([directory + '/' + f for f in os.listdir(directory)])\n"""
@@ -152,7 +157,7 @@ class Files(object):
             command += """
                 r = []
                 for f in listdir('{0}'):
-                    size = os.stat(f)[6]                    
+                    size = os.stat(f)[6]
                     r.append('{{0}} - {{1}} bytes'.format(f, size))
                 print(r)
             """.format(
@@ -194,10 +199,12 @@ class Files(object):
         )
         self._pyboard.enter_raw_repl()
         try:
+            logger.debug("Creating directory: " + directory)
             out = self._pyboard.exec_(textwrap.dedent(command))
         except PyboardError as ex:
             # Check if this is an OSError #17, i.e. directory already exists.
             if ex.args[2].decode("utf-8").find("OSError: [Errno 17] EEXIST") != -1:
+                logger.debug("  Directory already exists")
                 if not exists_okay:
                     raise DirectoryExistsError(
                         "Directory already exists: {0}".format(directory)
@@ -210,6 +217,7 @@ class Files(object):
         """Create or update the specified file with the provided data.
         """
         # Open the file for writing on the board and write chunks of data.
+        logger.debug("Putting file: " + filename)
         self._pyboard.enter_raw_repl()
         self._pyboard.exec_("f = open('{0}', 'wb')".format(filename))
         size = len(data)
@@ -237,6 +245,7 @@ class Files(object):
         )
         self._pyboard.enter_raw_repl()
         try:
+            logger.debug("Deleting file: " + filename)
             out = self._pyboard.exec_(textwrap.dedent(command))
         except PyboardError as ex:
             message = ex.args[2].decode("utf-8")
@@ -284,6 +293,7 @@ class Files(object):
         )
         self._pyboard.enter_raw_repl()
         try:
+            logger.debug("Deleting directory: " + directory)
             out = self._pyboard.exec_(textwrap.dedent(command))
         except PyboardError as ex:
             message = ex.args[2].decode("utf-8")
