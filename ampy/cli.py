@@ -135,24 +135,39 @@ def get(remote_file, local_file):
 @click.option(
     "--exists-okay", is_flag=True, help="Ignore if the directory already exists."
 )
+@click.option(
+    "--make-parents", is_flag=True, help="Create any missing parents."
+)
 @click.argument("directory")
-def mkdir(directory, exists_okay):
+def mkdir(directory, exists_okay, make_parents):
     """
     Create a directory on the board.
 
     Mkdir will create the specified directory on the board.  One argument is
     required, the full path of the directory to create.
 
-    Note that you cannot recursively create a hierarchy of directories with one
-    mkdir command, instead you must create each parent directory with separate
-    mkdir command calls.
-
+    By default you cannot recursively create a hierarchy of directories with one
+    mkdir command. You may create each parent directory with separate
+    mkdir command calls, or use the --make-parents option.
+    
     For example to make a directory under the root called 'code':
 
       ampy --port /board/serial/port mkdir /code
+      
+    To make a directory under the root called 'code/for/ampy', along with all
+    missing parents:
+
+      ampy --port /board/serial/port mkdir --make-parents /code/for/ampy
     """
     # Run the mkdir command.
     board_files = files.Files(_board)
+    if make_parents:
+        if directory[0] != '/':
+            directory = "/" + directory
+        dirpath = ""
+        for dir in directory.split("/")[1:-1]:
+            dirpath += "/" + dir
+            board_files.mkdir(dirpath, exists_okay=True)
     board_files.mkdir(directory, exists_okay=exists_okay)
 
 
