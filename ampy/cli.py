@@ -44,7 +44,6 @@ import ampy.pyboard as pyboard
 
 
 _board = None
-_verbose = False
 
 
 def windows_full_port_name(portname):
@@ -356,9 +355,9 @@ def run(local_file, no_output):
     # Run the provided file and print its output.
     board_files = files.Files(_board)
     try:
-        output = board_files.run(local_file, not no_output)
+        output = board_files.run(local_file, not no_output, not no_output)
         if output is not None:
-            logger.info(os.linesep + output.decode("utf-8")) # , end="")
+            logger.info(os.linesep + output.decode("utf-8"))
     except IOError:
         click.echo(
             "Failed to find or read input file: {0}".format(local_file), err=True

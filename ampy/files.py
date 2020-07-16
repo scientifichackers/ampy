@@ -28,19 +28,9 @@ from ampy.pyboard import PyboardError
 
 logger = logging.getLogger("ampy")
 
-
-logger = logging.getLogger("ampy")
-
-
 BUFFER_SIZE = 32  # Amount of data to read or write to the serial port at a time.
 # This is kept small because small chips and USB to serial
 # bridges usually have very small buffers.
-_verbose = False
-
-
-def SetVerboseStatus(verbose = False):
-    global _verbose
-    _verbose = verbose
 
 
 class DirectoryExistsError(Exception):
