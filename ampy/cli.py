@@ -28,6 +28,10 @@ import serial.serialutil
 
 import click
 import dotenv
+import logging
+
+logging.basicConfig(format="%(asctime)s: %(message)s")
+logger = logging.getLogger("ampy")
 
 # Load AMPY_PORT et al from .ampy file
 # Performed here because we need to beat click's decorators.
@@ -83,8 +87,17 @@ def windows_full_port_name(portname):
     help="Delay in seconds before entering RAW MODE (default 0). Can optionally specify with AMPY_DELAY environment variable.",
     metavar="DELAY",
 )
+@click.option(
+    "--verbose",
+    "-v",
+    envvar="AMPY_VERBOSE",
+    default=False,
+    is_flag=True,
+    help="Print messages to monitor the progress of the requested operation.",
+    metavar="VERBOSE",
+)
 @click.version_option()
-def cli(port, baud, delay):
+def cli(port, baud, delay, verbose):
     """ampy - Adafruit MicroPython Tool
 
     Ampy is a tool to control MicroPython boards over a serial connection.  Using
@@ -92,12 +105,17 @@ def cli(port, baud, delay):
     scripts.
     """
     global _board
+
+    level = logging.INFO
+    if verbose:
+        level = logging.DEBUG
+    logger.setLevel(level)
+
     # On Windows fix the COM port path name for ports above 9 (see comment in
     # windows_full_port_name function).
     if platform.system() == "Windows":
         port = windows_full_port_name(port)
     _board = pyboard.Pyboard(port, baudrate=baud, rawdelay=delay)
-
 
 @cli.command()
 @click.argument("remote_file")
@@ -126,7 +144,7 @@ def get(remote_file, local_file):
     contents = board_files.get(remote_file)
     # Print the file out if no local file was provided, otherwise save it.
     if local_file is None:
-        print(contents.decode("utf-8"))
+        logger.info(os.linesep + contents.decode("utf-8"))
     else:
         local_file.write(contents)
 
@@ -191,8 +209,11 @@ def ls(directory, long_format, recursive):
     """
     # List each file/directory on a separate line.
     board_files = files.Files(_board)
+    filesStr = os.linesep
     for f in board_files.ls(directory, long_format=long_format, recursive=recursive):
-        print(f)
+        filesStr += f + os.linesep
+
+    logger.info(filesStr)
 
 
 @cli.command()
@@ -315,7 +336,6 @@ def rmdir(remote_folder, missing_okay):
 )
 def run(local_file, no_output):
     """Run a script and print its output.
-
     Run will send the specified file to the board and execute it immediately.
     Any output from the board will be printed to the console (note that this is
     not a 'shell' and you can't send input to the program).
@@ -337,7 +357,7 @@ def run(local_file, no_output):
     try:
         output = board_files.run(local_file, not no_output, not no_output)
         if output is not None:
-            print(output.decode("utf-8"), end="")
+            logger.info(os.linesep + output.decode("utf-8"))
     except IOError:
         click.echo(
             "Failed to find or read input file: {0}".format(local_file), err=True
@@ -402,7 +422,7 @@ def reset(mode):
     """
     )
     r = _board.eval("on_next_reset({})".format(repr(mode)))
-    print("here we are", repr(r))
+    logger.info("here we are" + repr(r))
     if r:
         click.echo(r, err=True)
         return

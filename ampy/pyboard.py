@@ -39,7 +39,9 @@ Or:
 
 import sys
 import time
+import logging
 
+logger = logging.getLogger("ampy")
 _rawdelay = None
 
 try:
@@ -143,10 +145,10 @@ class Pyboard:
                 sys.stdout.flush()
             else:
                 if delayed:
-                    print('')
+                    logger.info('')
                 raise PyboardError('failed to access ' + device)
             if delayed:
-                print('')
+                logger.info('')
 
     def close(self):
         self.serial.close()
@@ -192,13 +194,13 @@ class Pyboard:
         self.serial.write(b'\r\x01') # ctrl-A: enter raw REPL
         data = self.read_until(1, b'raw REPL; CTRL-B to exit\r\n>')
         if not data.endswith(b'raw REPL; CTRL-B to exit\r\n>'):
-            print(data)
+            logger.info(data)
             raise PyboardError('could not enter raw repl')
 
         self.serial.write(b'\x04') # ctrl-D: soft reset
         data = self.read_until(1, b'soft reboot\r\n')
         if not data.endswith(b'soft reboot\r\n'):
-            print(data)
+            logger.info(data)
             raise PyboardError('could not enter raw repl')
         # By splitting this into 2 reads, it allows boot.py to print stuff,
         # which will show up after the soft reboot and before the raw REPL.
@@ -212,7 +214,7 @@ class Pyboard:
         # End modification above.
         data = self.read_until(1, b'raw REPL; CTRL-B to exit\r\n')
         if not data.endswith(b'raw REPL; CTRL-B to exit\r\n'):
-            print(data)
+            logger.info(data)
             raise PyboardError('could not enter raw repl')
 
     def exit_raw_repl(self):
@@ -303,10 +305,17 @@ def main():
     cmd_parser.add_argument('-u', '--user', default='micro', help='the telnet login username')
     cmd_parser.add_argument('-p', '--password', default='python', help='the telnet login password')
     cmd_parser.add_argument('-c', '--command', help='program passed in as string')
+    cmd_parser.add_argument('-v', '--verbose', help='Print messages to monitor the progress of the requested operation.')
     cmd_parser.add_argument('-w', '--wait', default=0, type=int, help='seconds to wait for USB connected board to become available')
     cmd_parser.add_argument('--follow', action='store_true', help='follow the output after running the scripts [default if no scripts given]')
     cmd_parser.add_argument('files', nargs='*', help='input files')
+
     args = cmd_parser.parse_args()
+
+    level = logging.INFO
+    if args.verbose:
+        level = logging.DEBUG
+    logger.setLevel(level)
 
     def execbuffer(buf):
         try:
@@ -316,7 +325,7 @@ def main():
             pyb.exit_raw_repl()
             pyb.close()
         except PyboardError as er:
-            print(er)
+            logger.error(er)
             sys.exit(1)
         except KeyboardInterrupt:
             sys.exit(1)
@@ -338,7 +347,7 @@ def main():
             ret, ret_err = pyb.follow(timeout=None, data_consumer=stdout_write_bytes)
             pyb.close()
         except PyboardError as er:
-            print(er)
+            logger.error(er)
             sys.exit(1)
         except KeyboardInterrupt:
             sys.exit(1)
