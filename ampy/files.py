@@ -22,8 +22,11 @@
 import ast
 import textwrap
 import binascii
+import logging
 
 from ampy.pyboard import PyboardError
+
+logger = logging.getLogger("ampy")
 
 
 BUFFER_SIZE = 32  # Amount of data to read or write to the serial port at a time.
@@ -77,8 +80,7 @@ class Files(object):
         )
         self._pyboard.enter_raw_repl()
         try:
-            if(_verbose):
-                print("Getting file: " + filename)
+            logger.debug("Getting file: " + filename)
             out = self._pyboard.exec_(textwrap.dedent(command))
         except PyboardError as ex:
             # Check if this is an OSError #2, i.e. file doesn't exist and
@@ -202,14 +204,12 @@ class Files(object):
         )
         self._pyboard.enter_raw_repl()
         try:
-            if(_verbose):
-                print("Creating directory: " + directory)
+            logger.debug("Creating directory: " + directory)
             out = self._pyboard.exec_(textwrap.dedent(command))
         except PyboardError as ex:
             # Check if this is an OSError #17, i.e. directory already exists.
             if ex.args[2].decode("utf-8").find("OSError: [Errno 17] EEXIST") != -1:
-                if(_verbose):
-                    print("  Directory already exists")
+                logger.debug("  Directory already exists")
                 if not exists_okay:
                     raise DirectoryExistsError(
                         "Directory already exists: {0}".format(directory)
@@ -222,8 +222,7 @@ class Files(object):
         """Create or update the specified file with the provided data.
         """
         # Open the file for writing on the board and write chunks of data.
-        if(_verbose):
-            print("Putting file: " + filename)
+        logger.debug("Putting file: " + filename)
         self._pyboard.enter_raw_repl()
         self._pyboard.exec_("f = open('{0}', 'wb')".format(filename))
         size = len(data)
@@ -251,8 +250,7 @@ class Files(object):
         )
         self._pyboard.enter_raw_repl()
         try:
-            if(_verbose):
-                print("Deleting file: " + filename),
+            logger.debug("Deleting file: " + filename)
             out = self._pyboard.exec_(textwrap.dedent(command))
         except PyboardError as ex:
             message = ex.args[2].decode("utf-8")
@@ -300,8 +298,7 @@ class Files(object):
         )
         self._pyboard.enter_raw_repl()
         try:
-            if(_verbose):
-                print("Deleting directory: " + directory)
+            logger.debug("Deleting directory: " + directory)
             out = self._pyboard.exec_(textwrap.dedent(command))
         except PyboardError as ex:
             message = ex.args[2].decode("utf-8")
