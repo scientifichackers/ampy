@@ -23,6 +23,8 @@ import ast
 import textwrap
 import binascii
 
+from progress.bar import Bar
+
 from ampy.pyboard import PyboardError
 
 
@@ -213,6 +215,10 @@ class Files(object):
         self._pyboard.enter_raw_repl()
         self._pyboard.exec_("f = open('{0}', 'wb')".format(filename))
         size = len(data)
+
+        # Init bar object for visualize progress bar
+        bar = Bar('Processing', max=size//BUFFER_SIZE+1)
+
         # Loop through and write a buffer size chunk of data at a time.
         for i in range(0, size, BUFFER_SIZE):
             chunk_size = min(BUFFER_SIZE, size - i)
@@ -221,6 +227,10 @@ class Files(object):
             if not chunk.startswith("b"):
                 chunk = "b" + chunk
             self._pyboard.exec_("f.write({0})".format(chunk))
+
+            bar.next()
+
+        bar.finish()
         self._pyboard.exec_("f.close()")
         self._pyboard.exit_raw_repl()
 
