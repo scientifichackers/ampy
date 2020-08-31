@@ -177,43 +177,77 @@ class Pyboard:
         if _rawdelay > 0:
             time.sleep(_rawdelay)
 
-        # ctrl-C twice: interrupt any running program
-        self.serial.write(b'\r\x03')
-        time.sleep(0.1)
-        self.serial.write(b'\x03')
-        time.sleep(0.1)
+        def _do():
+            ctrl_c = b'\r\x03'
+            self.serial.write(ctrl_c) # ctrl-C: interrupt any running program
 
-        # flush input (without relying on serial.flushInput())
-        n = self.serial.inWaiting()
-        while n > 0:
-            self.serial.read(n)
+            # flush input (without relying on serial.flushInput())
             n = self.serial.inWaiting()
+            while n > 0:
+                self.serial.read(n)
+                n = self.serial.inWaiting()
 
-        self.serial.write(b'\r\x01') # ctrl-A: enter raw REPL
-        data = self.read_until(1, b'raw REPL; CTRL-B to exit\r\n>')
-        if not data.endswith(b'raw REPL; CTRL-B to exit\r\n>'):
-            print(data)
-            raise PyboardError('could not enter raw repl')
+            self.serial.write(b'\r\x01') # ctrl-A: enter raw REPL
+            data = self.read_until(1, b'raw REPL; CTRL-B to exit\r\n>')
 
-        self.serial.write(b'\x04') # ctrl-D: soft reset
-        data = self.read_until(1, b'soft reboot\r\n')
-        if not data.endswith(b'soft reboot\r\n'):
-            print(data)
-            raise PyboardError('could not enter raw repl')
-        # By splitting this into 2 reads, it allows boot.py to print stuff,
-        # which will show up after the soft reboot and before the raw REPL.
-        # Modification from original pyboard.py below:
-        #   Add a small delay and send Ctrl-C twice after soft reboot to ensure
-        #   any main program loop in main.py is interrupted.
-        time.sleep(0.5)
-        self.serial.write(b'\x03')
-        time.sleep(0.1)           # (slight delay before second interrupt
-        self.serial.write(b'\x03')
-        # End modification above.
-        data = self.read_until(1, b'raw REPL; CTRL-B to exit\r\n')
-        if not data.endswith(b'raw REPL; CTRL-B to exit\r\n'):
-            print(data)
-            raise PyboardError('could not enter raw repl')
+            try_count = 0
+
+            # when dealing with multi threaded programs it seems that a
+            # Ctrl+C is needed for each thread in order to get the program
+            # to terminate fully. I set this so it will go to a maximum of 5
+            # CTRL+C combinations.
+            while not data.endswith(b'raw REPL; CTRL-B to exit\r\n>'):
+                try_count += 1
+                if try_count == 5:
+                    print(data)
+                    raise PyboardError('could not enter raw repl')
+
+                ctrl_c += b'\x03'
+                self.serial.write(ctrl_c)  # ctrl-C twice: interrupt any running program
+
+                # flush input (without relying on serial.flushInput())
+                n = self.serial.inWaiting()
+                while n > 0:
+                    self.serial.read(n)
+                    n = self.serial.inWaiting()
+
+                self.serial.write(b'\r\x01')  # ctrl-A: enter raw REPL
+                data = self.read_until(1, b'raw REPL; CTRL-B to exit\r\n>')
+
+            self.serial.write(b'\x04') # ctrl-D: soft reset
+            data = self.read_until(1, b'soft reboot\r\n')
+
+            if not data.endswith(b'soft reboot\r\n'):
+                raise PyboardError('could not enter raw repl')
+            # By splitting this into 2 reads, it allows boot.py to print stuff,
+            # which will show up after the soft reboot and before the raw REPL.
+            # Modification from original pyboard.py below:
+            #   Add a small delay and send Ctrl-C twice after soft reboot to ensure
+            #   any main program loop in main.py is interrupted.
+            time.sleep(0.5)
+            self.serial.write(b'\x03')
+            time.sleep(0.1)  # (slight delay before second interrupt
+            self.serial.write(b'\x03')
+            data = self.read_until(1, b'raw REPL; CTRL-B to exit\r\n')
+            if not data.endswith(b'raw REPL; CTRL-B to exit\r\n'):
+                if len(ctrl_c) > 3:
+                    # there is a really strong chance that the users main
+                    # program loop is in the boot.py and not in main.py so what we want
+                    # to do at this point is to send the remaining CTRL+C combinations used
+                    # to interrupt the program initially.
+                    self.serial.write(ctrl_c[3:])
+                data = self.read_until(1, b'raw REPL; CTRL-B to exit\r\n')
+
+            if not data.endswith(b'raw REPL; CTRL-B to exit\r\n'):
+                print(data)
+                raise PyboardError('could not enter raw repl')
+
+        # if at first we don't suceed may as well give it another go.
+        # I have found that if it fails the first time it usually will not the second.
+        try:
+            _do()
+        except PyboardError:
+            _do()
 
     def exit_raw_repl(self):
         self.serial.write(b'\r\x02') # ctrl-B: enter friendly REPL
