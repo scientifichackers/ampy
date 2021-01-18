@@ -1,6 +1,6 @@
 ## ampy
 
-Adafruit MicroPython Tool (ampy) - Utility to interact with a CircuitPython or MicroPython board over a serial connection.
+MicroPython Tool (ampy) - Utility to interact with a CircuitPython or MicroPython board over a serial connection.
 
 Ampy is meant to be a simple command line tool to manipulate files and run code on a CircuitPython or
 MicroPython board over its serial connection.
