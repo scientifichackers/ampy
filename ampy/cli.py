@@ -37,7 +37,7 @@ config = dotenv.find_dotenv(filename=".ampy", usecwd=True)
 if config:
     dotenv.load_dotenv(dotenv_path=config)
 
-import files as files
+import ampy.files as files
 import ampy.pyboard as pyboard
 
 
