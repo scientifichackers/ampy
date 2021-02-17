@@ -28,6 +28,8 @@ import serial.serialutil
 
 import click
 import dotenv
+from progress_bar import PorgressBar
+from progress_bar import PorgressBarBath
 
 # Load AMPY_PORT et al from .ampy file
 # Performed here because we need to beat click's decorators.
@@ -35,7 +37,7 @@ config = dotenv.find_dotenv(filename=".ampy", usecwd=True)
 if config:
     dotenv.load_dotenv(dotenv_path=config)
 
-import ampy.files as files
+import files as files
 import ampy.pyboard as pyboard
 
 
@@ -235,6 +237,14 @@ def put(local, remote):
     # Check if path is a folder and do recursive copy of everything inside it.
     # Otherwise it's a file and should simply be copied over.
     if os.path.isdir(local):
+        # Create progress bar for each file
+        pb_bath =  PorgressBarBath('Overall progress')
+        for parent, child_dirs, child_files in os.walk(local, followlinks=True):
+            for filename in child_files:
+                path = os.path.join(parent, filename)
+                size = os.stat(path).st_size
+                pb_bath.add_subjob(PorgressBar(name=path,total=size ))
+
         # Directory copy, create the directory and walk all children to copy
         # over the files.
         board_files = files.Files(_board)
@@ -249,20 +259,25 @@ def put(local, remote):
             except files.DirectoryExistsError:
                 # Ignore errors for directories that already exist.
                 pass
+            
             # Loop through all the files and put them on the board too.
             for filename in child_files:
-                with open(os.path.join(parent, filename), "rb") as infile:
+                local_path = os.path.join(parent, filename)
+                with open(local_path, "rb") as infile:
                     remote_filename = posixpath.join(remote_parent, filename)
-                    board_files.put(remote_filename, infile.read())
-
-
+                    data = infile.read()
+                    job = pb_bath.get_subjob(local_path)
+                    callback = job.on_progress_done
+                    board_files.put(remote_filename, data, callback)
     else:
         # File copy, open the file and copy its contents to the board.
         # Put the file on the board.
         with open(local, "rb") as infile:
+            data = infile.read()
+            progress = PorgressBar(name=local, total=len(data))
             board_files = files.Files(_board)
-            board_files.put(remote, infile.read())
-
+            board_files.put(remote, data, progress.on_progress_done)
+    print('')
 
 @cli.command()
 @click.argument("remote_file")
