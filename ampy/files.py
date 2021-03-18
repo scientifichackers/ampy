@@ -76,7 +76,8 @@ class Files(object):
             # Check if this is an OSError #2, i.e. file doesn't exist and
             # rethrow it as something more descriptive.
             try:
-                if ex.args[2].decode("utf-8").find("OSError: [Errno 2] ENOENT") != -1:
+                message = ex.args[2].decode("utf-8")
+                if message.find("OSError") != -1 and message.find("2") != -1:
                     raise RuntimeError("No such file: {0}".format(filename))
                 else:
                     raise ex
@@ -170,7 +171,8 @@ class Files(object):
         except PyboardError as ex:
             # Check if this is an OSError #2, i.e. directory doesn't exist and
             # rethrow it as something more descriptive.
-            if ex.args[2].decode("utf-8").find("OSError: [Errno 2] ENOENT") != -1:
+            message = ex.args[2].decode("utf-8")
+            if message.find("OSError") != -1 and message.find("2") != 1:
                 raise RuntimeError("No such directory: {0}".format(directory))
             else:
                 raise ex
@@ -197,7 +199,8 @@ class Files(object):
             out = self._pyboard.exec_(textwrap.dedent(command))
         except PyboardError as ex:
             # Check if this is an OSError #17, i.e. directory already exists.
-            if ex.args[2].decode("utf-8").find("OSError: [Errno 17] EEXIST") != -1:
+            message = ex.args[2].decode("utf-8")
+            if message.find("OSError") != -1 and message.find("17") != -1:
                 if not exists_okay:
                     raise DirectoryExistsError(
                         "Directory already exists: {0}".format(directory)
@@ -242,10 +245,10 @@ class Files(object):
             message = ex.args[2].decode("utf-8")
             # Check if this is an OSError #2, i.e. file/directory doesn't exist
             # and rethrow it as something more descriptive.
-            if message.find("OSError: [Errno 2] ENOENT") != -1:
+            if message.find("OSError") != -1 and message.find("2") != 1:
                 raise RuntimeError("No such file/directory: {0}".format(filename))
             # Check for OSError #13, the directory isn't empty.
-            if message.find("OSError: [Errno 13] EACCES") != -1:
+            if message.find("OSError") != -1 and message.find("13") != 1:
                 raise RuntimeError("Directory is not empty: {0}".format(filename))
             else:
                 raise ex
@@ -289,7 +292,7 @@ class Files(object):
             message = ex.args[2].decode("utf-8")
             # Check if this is an OSError #2, i.e. directory doesn't exist
             # and rethrow it as something more descriptive.
-            if message.find("OSError: [Errno 2] ENOENT") != -1:
+            if message.find("OSError") != -1 and message.find("2") != 1:
                 if not missing_okay:
                     raise RuntimeError("No such directory: {0}".format(directory))
             else:
