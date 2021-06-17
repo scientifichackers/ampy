@@ -1,3 +1,7 @@
+# ampy replacement
+We have been working on the next version of ampy which will solve various problems with the current system. Based on a new modular architecture, it makes adding device support and features very simple using plugins. It also aims to support coding over WiFi for supported devices. This should eliminate the need to have a wired connection and improve reliability as well.
+[Here](https://github.com/curiouswala/ampy-2) is an alpha release please go ahead and play with it. 
+
 ## ampy
 
 MicroPython Tool (ampy) - Utility to interact with a CircuitPython or MicroPython board over a serial connection.
