@@ -1,6 +1,6 @@
 # ampy replacement
 We have been working on the next version of ampy which will solve various problems with the current system. Based on a new modular architecture, it makes adding device support and features very simple using plugins. It also aims to support coding over WiFi for supported devices. This should eliminate the need to have a wired connection and improve reliability as well.
-[Here](https://github.com/curiouswala/ampy-2) is an alpha release please go ahead and play with it. Also recommend a new name in the issues.
+[Here](https://github.com/curiouswala/ampy-2) is an alpha release please go ahead and play with it. Leave suggestions for a new name in the issue section. :)
 
 ## ampy
 
