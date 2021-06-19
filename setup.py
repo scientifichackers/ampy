@@ -50,7 +50,7 @@ setup(
     author='Adafruit Industries',
     author_email='circuitpython@adafruit.com',
 
-    install_requires=['click', 'pyserial', 'python-dotenv'],
+    install_requires=['click', 'pyserial', 'python-dotenv', 'progress'],
 
     # Choose your license
     license='MIT',
