@@ -48,10 +48,17 @@ except AttributeError:
     # Python2 doesn't have buffer attr
     stdout = sys.stdout
 
+newline = b""
 def stdout_write_bytes(b):
+    global newline
     b = b.replace(b"\x04", b"")
-    stdout.write(b)
-    stdout.flush()
+    if b==b'\r':
+        print(newline.decode('UTF-8'))
+        newline = b''
+    elif b==b'\n':
+        pass
+    else:
+        newline = newline + b
 
 class PyboardError(BaseException):
     pass
