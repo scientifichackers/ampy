@@ -280,22 +280,21 @@ def put(local, remote):
 
 
 @cli.command()
-@click.argument("remote_file")
-def rm(remote_file):
-    """Remove a file from the board.
+@click.argument("remote_files", metavar="remote_file", nargs=-1)
+def rm(remote_files):
+    """Remove one or more files from the board.
 
-    Remove the specified file from the board's filesystem.  Must specify one
-    argument which is the path to the file to delete.  Note that this can't
-    delete directories which have files inside them, but can delete empty
+    Remove the specified file(s) from the board's filesystem.  Note that this
+    can't delete directories which have files inside them, but can delete empty
     directories.
 
-    For example to delete main.py from the root of a board run:
+    For example to delete main.py and data.txt from the root of a board run:
 
-      ampy --port /board/serial/port rm main.py
+      ampy --port /board/serial/port rm main.py data.txt
     """
-    # Delete the provided file/directory on the board.
     board_files = files.Files(_board)
-    board_files.rm(remote_file)
+    for filepath in remote_files:
+        board_files.rm(filepath)
 
 
 @cli.command()
