@@ -101,48 +101,65 @@ def cli(port, baud, delay):
 
 
 @cli.command()
-@click.argument("remote_file")
+@click.argument("remote_files", metavar="remote_file", nargs=-1)
 @click.argument(
     "local_path",
     type=click.Path(writable=True, allow_dash=True, path_type=pathlib.Path),
     required=False
 )
-def get(remote_file, local_path):
+def get(remote_files, local_path):
     """
     Retrieve a file from the board.
 
-    Get will download a file from the board and print its contents or save it
-    locally.  You must pass at least one argument which is the path to the file
-    to download from the board.  If you don't specify a second argument then
-    the file contents will be printed to standard output.  However if you pass
-    a file name or a directory as the second argument then the contents of the
-    downloaded file will be saved to that file or directory respectively
-    (overwriting anything inside it!).
+    Get will download one or more files from the board and print its contents or save it
+    locally.  You must pass at least one argument which is the path to a file
+    to download from the board.  If you specify more than one argument, the
+    last one is the destination.  If you specify exactly one remote file and
+    one local path, then the local path can either be a currently existing
+    directory or a destination file path.  If you specify more than one remote
+    file (i.e., three or more arguments), then the last argument must be a
+    local directory that exists.
+
+    If only one argument is specified, or if you pass in "-" as the second
+    argument, then the contents of the specified remote file will be printed to
+    standard output.  This is only available for one remote file.
+
+    Note: If the destination file exists, it will be overwritten!
 
     For example to retrieve the boot.py and print it out run:
 
       ampy --port /board/serial/port get boot.py
 
-    Or to get main.py and save it as main.py locally run:
-
-      ampy --port /board/serial/port get main.py ./
-
     You can also specify "-" as the destination to explicitly specify to output
     to standard output.
+
+    Or to get main.py and helper.py and save them in the current directory
+    locally, run:
+
+      ampy --port /board/serial/port get main.py helper.py ./
     """
-    # Get the file contents.
+    # checks
+    if len(remote_files) == 0:
+        raise click.UsageError("Must specify at least one remote file")
+    if len(remote_files) > 1 and not local_path.is_dir():
+        raise click.UsageError(
+                f"Invalid value for '[LOCAL_PATH]': Directory '{local_path}' does not exist.")
+
     board_files = files.Files(_board)
-    contents = board_files.get(remote_file)
-    # Print the file out if no local file was provided, otherwise save it.
-    if local_path is None or str(local_path) == "-":
-        print(contents.decode("utf-8"))
-    elif local_path.is_dir():
-        remote_path = pathlib.Path(remote_file)
-        with local_path.joinpath(remote_path.name).open(mode='wb') as local_file:
-            local_file.write(contents)
-    else:
-        with local_path.open(mode='wb') as local_file:
-            local_file.write(contents)
+    for remote_file in remote_files:
+        # Get the file contents.
+        contents = board_files.get(remote_file)
+
+        # Print the file out if no local file was provided, otherwise save it.
+        if local_path is None or str(local_path) == "-":
+            print(contents.decode("utf-8"))
+        elif local_path.is_dir():
+            remote_path = pathlib.Path(remote_file)
+            with local_path.joinpath(remote_path.name).open(mode='wb') as local_file:
+                local_file.write(contents)
+        else:
+            with local_path.open(mode='wb') as local_file:
+                local_file.write(contents)
 
 
 @cli.command()
