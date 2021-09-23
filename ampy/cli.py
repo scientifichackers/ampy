@@ -213,7 +213,8 @@ def ls(directory, long_format, recursive):
 @cli.command()
 @click.argument("local", type=click.Path(exists=True))
 @click.argument("remote", required=False)
-def put(local, remote):
+@click.option("--strip", "-s", is_flag=True, help="Strip docstrings and comments")
+def put(local, remote, strip):
     """Put a file or folder and its contents on the board.
 
     Put will upload a local file or folder  to the board.  If the file already
@@ -247,12 +248,28 @@ def put(local, remote):
     # Use the local filename if no remote filename is provided.
     if remote is None:
         remote = os.path.basename(os.path.abspath(local))
+    board_files = files.Files(_board)
+
+    def copy_file(local_filepath, remote_filepath):
+        with open(local_filepath, "rb") as infile:
+            contents = infile.read()
+
+            # try to strip the python file if requested
+            if strip and local_filepath.endswith(".py"):
+                try:
+                    contents = files.strip_docstrings_and_comments(contents)
+                except:
+                    # not a hard error, just push the old contents
+                    print("Warning: could not strip", filepath)
+
+            # copy the (potentially stripped) contents to the board
+            board_files.put(remote_filepath, contents)
+
     # Check if path is a folder and do recursive copy of everything inside it.
     # Otherwise it's a file and should simply be copied over.
     if os.path.isdir(local):
         # Directory copy, create the directory and walk all children to copy
         # over the files.
-        board_files = files.Files(_board)
         for parent, child_dirs, child_files in os.walk(local, followlinks=True):
             # Create board filesystem absolute path to parent directory.
             remote_parent = posixpath.normpath(
@@ -266,17 +283,11 @@ def put(local, remote):
                 pass
             # Loop through all the files and put them on the board too.
             for filename in child_files:
-                with open(os.path.join(parent, filename), "rb") as infile:
-                    remote_filename = posixpath.join(remote_parent, filename)
-                    board_files.put(remote_filename, infile.read())
-
-
+                filepath = os.path.join(parent, filename)
+                remote_filepath = posixpath.join(remote_parent, filename)
+                copy_file(filepath, remote_filepath)
     else:
-        # File copy, open the file and copy its contents to the board.
-        # Put the file on the board.
-        with open(local, "rb") as infile:
-            board_files = files.Files(_board)
-            board_files.put(remote, infile.read())
+        copy_file(local, remote)
 
 
 @cli.command()
