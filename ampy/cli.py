@@ -55,11 +55,10 @@ def windows_full_port_name(portname):
         return "\\\\.\\{0}".format(portname)
 
 
-@click.group()
+@click.group(context_settings={'auto_envvar_prefix': 'AMPY'})
 @click.option(
     "--port",
     "-p",
-    envvar="AMPY_PORT",
     required=True,
     type=click.STRING,
     help="Name of serial port for connected board.  Can optionally specify with AMPY_PORT environment variable.",
@@ -68,7 +67,6 @@ def windows_full_port_name(portname):
 @click.option(
     "--baud",
     "-b",
-    envvar="AMPY_BAUD",
     default=115200,
     type=click.INT,
     help="Baud rate for the serial connection (default 115200).  Can optionally specify with AMPY_BAUD environment variable.",
@@ -77,7 +75,6 @@ def windows_full_port_name(portname):
 @click.option(
     "--delay",
     "-d",
-    envvar="AMPY_DELAY",
     default=0,
     type=click.FLOAT,
     help="Delay in seconds before entering RAW MODE (default 0). Can optionally specify with AMPY_DELAY environment variable.",
