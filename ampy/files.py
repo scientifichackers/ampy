@@ -209,7 +209,7 @@ class Files(object):
                 raise ex
         self._pyboard.exit_raw_repl()
 
-    def put(self, filename, data):
+    def put(self, filename, data, progress_cb=None):
         """Create or update the specified file with the provided data.
         """
         # Open the file for writing on the board and write chunks of data.
@@ -224,6 +224,10 @@ class Files(object):
             if not chunk.startswith("b"):
                 chunk = "b" + chunk
             self._pyboard.exec_("f.write({0})".format(chunk))
+            # notify caller how much has already been written
+            if hasattr(progress_cb, '__call__'):
+                progress_cb(chunk_size)
+
         self._pyboard.exec_("f.close()")
         self._pyboard.exit_raw_repl()
 
