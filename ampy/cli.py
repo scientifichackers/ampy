@@ -21,6 +21,7 @@
 # SOFTWARE.
 from __future__ import print_function
 import os
+import pathlib
 import platform
 import posixpath
 import re
@@ -102,35 +103,65 @@ def cli(port, baud, delay):
 
 
 @cli.command()
-@click.argument("remote_file")
-@click.argument("local_file", type=click.File("wb"), required=False)
-def get(remote_file, local_file):
+@click.argument("remote_files", metavar="remote_file", nargs=-1)
+@click.argument(
+    "local_path",
+    type=click.Path(writable=True, allow_dash=True, path_type=pathlib.Path),
+    required=False
+)
+def get(remote_files, local_path):
     """
     Retrieve a file from the board.
 
-    Get will download a file from the board and print its contents or save it
-    locally.  You must pass at least one argument which is the path to the file
-    to download from the board.  If you don't specify a second argument then
-    the file contents will be printed to standard output.  However if you pass
-    a file name as the second argument then the contents of the downloaded file
-    will be saved to that file (overwriting anything inside it!).
+    Get will download one or more files from the board and print its contents or save it
+    locally.  You must pass at least one argument which is the path to a file
+    to download from the board.  If you specify more than one argument, the
+    last one is the destination.  If you specify exactly one remote file and
+    one local path, then the local path can either be a currently existing
+    directory or a destination file path.  If you specify more than one remote
+    file (i.e., three or more arguments), then the last argument must be a
+    local directory that exists.
+
+    If only one argument is specified, or if you pass in "-" as the second
+    argument, then the contents of the specified remote file will be printed to
+    standard output.  This is only available for one remote file.
+
+    Note: If the destination file exists, it will be overwritten!
 
     For example to retrieve the boot.py and print it out run:
 
       ampy --port /board/serial/port get boot.py
 
-    Or to get main.py and save it as main.py locally run:
+    You can also specify "-" as the destination to explicitly specify to output
+    to standard output.
 
-      ampy --port /board/serial/port get main.py main.py
+    Or to get main.py and helper.py and save them in the current directory
+    locally, run:
+
+      ampy --port /board/serial/port get main.py helper.py ./
     """
-    # Get the file contents.
+    # checks
+    if len(remote_files) == 0:
+        raise click.UsageError("Must specify at least one remote file")
+    if len(remote_files) > 1 and not local_path.is_dir():
+        raise click.UsageError(
+                f"Invalid value for '[LOCAL_PATH]': Directory '{local_path}' does not exist.")
+
     board_files = files.Files(_board)
-    contents = board_files.get(remote_file)
-    # Print the file out if no local file was provided, otherwise save it.
-    if local_file is None:
-        print(contents.decode("utf-8"))
-    else:
-        local_file.write(contents)
+    for remote_file in remote_files:
+        # Get the file contents.
+        contents = board_files.get(remote_file)
+
+        # Print the file out if no local file was provided, otherwise save it.
+        if local_path is None or str(local_path) == "-":
+            print(contents.decode("utf-8"))
+        elif local_path.is_dir():
+            remote_path = pathlib.Path(remote_file)
+            with local_path.joinpath(remote_path.name).open(mode='wb') as local_file:
+                local_file.write(contents)
+        else:
+            with local_path.open(mode='wb') as local_file:
+                local_file.write(contents)
 
 
 @cli.command()
@@ -295,22 +326,21 @@ def put(local, remote):
     print('')
 
 @cli.command()
-@click.argument("remote_file")
-def rm(remote_file):
-    """Remove a file from the board.
+@click.argument("remote_files", metavar="remote_file", nargs=-1)
+def rm(remote_files):
+    """Remove one or more files from the board.
 
-    Remove the specified file from the board's filesystem.  Must specify one
-    argument which is the path to the file to delete.  Note that this can't
-    delete directories which have files inside them, but can delete empty
+    Remove the specified file(s) from the board's filesystem.  Note that this
+    can't delete directories which have files inside them, but can delete empty
     directories.
 
-    For example to delete main.py from the root of a board run:
+    For example to delete main.py and data.txt from the root of a board run:
 
-      ampy --port /board/serial/port rm main.py
+      ampy --port /board/serial/port rm main.py data.txt
     """
-    # Delete the provided file/directory on the board.
     board_files = files.Files(_board)
-    board_files.rm(remote_file)
+    for filepath in remote_files:
+        board_files.rm(filepath)
 
 
 @cli.command()
