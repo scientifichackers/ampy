@@ -105,7 +105,7 @@ class Files(object):
             directory = "/" + directory
 
         command = """\
-                try:        
+                try:
                     import os
                 except ImportError:
                     import uos as os\n"""
@@ -119,10 +119,10 @@ class Files(object):
                         try:
                             # if its a directory, then it should provide some children.
                             children = os.listdir(dir_or_file)
-                        except OSError:                        
+                        except OSError:
                             # probably a file. run stat() to confirm.
                             os.stat(dir_or_file)
-                            result.add(dir_or_file) 
+                            result.add(dir_or_file)
                         else:
                             # probably a directory, add to result if empty.
                             if children:
@@ -133,17 +133,17 @@ class Files(object):
                                         next = dir_or_file + child
                                     else:
                                         next = dir_or_file + '/' + child
-                                    
+
                                     _listdir(next)
                             else:
-                                result.add(dir_or_file)                     
+                                result.add(dir_or_file)
 
                     _listdir(directory)
                     return sorted(result)\n"""
         else:
             command += """\
                 def listdir(directory):
-                    if directory == '/':                
+                    if directory == '/':
                         return sorted([directory + f for f in os.listdir(directory)])
                     else:
                         return sorted([directory + '/' + f for f in os.listdir(directory)])\n"""
@@ -153,7 +153,7 @@ class Files(object):
             command += """
                 r = []
                 for f in listdir('{0}'):
-                    size = os.stat(f)[6]                    
+                    size = os.stat(f)[6]
                     r.append('{{0}} - {{1}} bytes'.format(f, size))
                 print(r)
             """.format(
@@ -254,6 +254,9 @@ class Files(object):
             # Check for OSError #13, the directory isn't empty.
             if message.find("OSError") != -1 and message.find("13") != 1:
                 raise RuntimeError("Directory is not empty: {0}".format(filename))
+            # Check for OSError #21, the object is a directory.
+            if message.find("OSError: [Errno 21] EISDIR") != -1:
+                self.rmdir(filename)
             else:
                 raise ex
         self._pyboard.exit_raw_repl()

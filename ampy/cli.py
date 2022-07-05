@@ -102,9 +102,17 @@ def cli(port, baud, delay):
 
 
 @cli.command()
-@click.argument("remote_file")
+@click.option(
+    '--all',
+    is_flag=True,
+    required=False,
+    default=False,
+    help = '''Provides posibility to get all files from micropython device.
+Also receives one argument which is destination path and is optional'''
+)
+@click.argument("remote_file", default = "all")
 @click.argument("local_file", type=click.File("wb"), required=False)
-def get(remote_file, local_file):
+def get(all, remote_file, local_file):
     """
     Retrieve a file from the board.
 
@@ -122,15 +130,47 @@ def get(remote_file, local_file):
     Or to get main.py and save it as main.py locally run:
 
       ampy --port /board/serial/port get main.py main.py
+
+    Also to get all files to the current folder:
+
+      ampy --port /board/serial/port get --all
+
+    Or to the mentioned folder:
+
+      ampy --port /board/serial/port get --all ./destination/
     """
     # Get the file contents.
     board_files = files.Files(_board)
-    contents = board_files.get(remote_file)
-    # Print the file out if no local file was provided, otherwise save it.
-    if local_file is None:
-        print(contents.decode("utf-8"))
+    filelist = board_files.ls(long_format=False)
+
+    # When --all flag is set - the next argument is remote_file
+    # but will be used as a path to save files
+    if all:
+        if remote_file.endswith('/'):
+            destination_folder = remote_file
+        else:
+            destination_folder = remote_file + '/'
+        if not os.path.exists(destination_folder):
+            print('''Specified path doesn\'t exist. Files will be
+downloaded to current location''')
+            destination_folder = ''
     else:
-        local_file.write(contents)
+        destination_folder = ''
+
+    if all or remote_file == 'all':                     # download all files
+        for file in filelist:
+            contents = board_files.get(file)
+            file = file.replace('/', destination_folder)
+            with open(file, 'wb') as thefile:
+                thefile.write(contents)
+    else:                                               # download specified
+        contents = board_files.get(remote_file)
+        # Print the file out if no local file was provided, otherwise save it.
+        if local_file is None:
+            print(contents.decode("utf-8"))
+        else:
+            local_file.write(contents)
+
 
 
 @cli.command()
@@ -295,8 +335,15 @@ def put(local, remote):
     print('')
 
 @cli.command()
-@click.argument("remote_file")
-def rm(remote_file):
+@click.option(
+    '--all',
+    is_flag=True,
+    required=False,
+    default=False,
+    help = 'Provides posibility to remove all files from micropython device.'
+)
+@click.argument("remote_file", default = "all")
+def rm(all, remote_file):
     """Remove a file from the board.
 
     Remove the specified file from the board's filesystem.  Must specify one
@@ -307,11 +354,20 @@ def rm(remote_file):
     For example to delete main.py from the root of a board run:
 
       ampy --port /board/serial/port rm main.py
+
+    To delete all files and folders from the board:
+
+      ampy --port /board/serial/port rm --all
     """
     # Delete the provided file/directory on the board.
     board_files = files.Files(_board)
-    board_files.rm(remote_file)
+    filelist = board_files.ls(long_format=False)
 
+    if all or remote_file == 'all':                     # remove all files
+        for file in filelist:
+            board_files.rm(file)
+    else:                                               # remove specified
+        board_files.rm(remote_file)
 
 @cli.command()
 @click.option(
@@ -444,8 +500,7 @@ def reset(mode):
         # serial when restarted via microcontroller.reset()
         pass
 
-
-if __name__ == "__main__":
+def main():
     try:
         cli()
     finally:
@@ -458,3 +513,6 @@ if __name__ == "__main__":
                 # and shouldn't cause a new error or problem if the connection can't
                 # be closed.
                 pass
+
+if __name__ == "__main__":
+    main()
