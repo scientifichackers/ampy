@@ -58,11 +58,12 @@ You should see usage information displayed like below:
       --help           Show this message and exit.
 
     Commands:
-      get  Retrieve a file from the board.
-      ls   List contents of a directory on the board.
-      put  Put a file on the board.
-      rm   Remove a file from the board.
-      run  Run a script and print its output.
+      get    Retrieve a file from the board.
+      ls     List contents of a directory on the board.
+      put    Put a file on the board.
+      rm     Remove a file from the board.
+      rmdir  Remove a directory and its descendants
+      run    Run a script and print its output.
 
 If you'd like to install from the Github source then use the standard Python
 setup.py install (or develop mode):
