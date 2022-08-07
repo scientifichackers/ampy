@@ -176,6 +176,9 @@ class Pyboard:
         # Brief delay before sending RAW MODE char if requests
         if _rawdelay > 0:
             time.sleep(_rawdelay)
+            
+        # An initial read seems required to wake the feather52 serial console.
+        self.read_until(1, b'\n', timeout=0.5)
 
         # ctrl-C twice: interrupt any running program
         self.serial.write(b'\r\x03')
