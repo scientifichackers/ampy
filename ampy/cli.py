@@ -28,8 +28,8 @@ import serial.serialutil
 
 import click
 import dotenv
-from progress_bar import PorgressBar
-from progress_bar import PorgressBarBath
+from progress_bar import ProgressBar
+from progress_bar import ProgressBarBath
 
 # Load AMPY_PORT et al from .ampy file
 # Performed here because we need to beat click's decorators.
