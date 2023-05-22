@@ -28,8 +28,8 @@ import serial.serialutil
 
 import click
 import dotenv
-from progress_bar import PorgressBar
-from progress_bar import PorgressBarBath
+from progress_bar import ProgressBar
+from progress_bar import ProgressBarBath
 
 # Load AMPY_PORT et al from .ampy file
 # Performed here because we need to beat click's decorators.
@@ -253,12 +253,12 @@ def put(local, remote):
     # Otherwise it's a file and should simply be copied over.
     if os.path.isdir(local):
         # Create progress bar for each file
-        pb_bath =  PorgressBarBath('Overall progress')
+        pb_bath =  ProgressBarBath('Overall progress')
         for parent, child_dirs, child_files in os.walk(local, followlinks=True):
             for filename in child_files:
                 path = os.path.join(parent, filename)
                 size = os.stat(path).st_size
-                pb_bath.add_subjob(PorgressBar(name=path,total=size ))
+                pb_bath.add_subjob(ProgressBar(name=path,total=size ))
 
         # Directory copy, create the directory and walk all children to copy
         # over the files.
@@ -289,7 +289,7 @@ def put(local, remote):
         # Put the file on the board.
         with open(local, "rb") as infile:
             data = infile.read()
-            progress = PorgressBar(name=local, total=len(data))
+            progress = ProgressBar(name=local, total=len(data))
             board_files = files.Files(_board)
             board_files.put(remote, data, progress.on_progress_done)
     print('')
