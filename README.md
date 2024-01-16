@@ -1,3 +1,9 @@
+# this fork
+
+fixes the issue where ampy does not work on esp32cam and other boards that wire the RST serial line to the MCU reset pin.
+
+micropython's pyboard.py has the python bug which causes this - this fork includes the updated pyboard.py which works around that python bug.
+
 # ampy replacement
 We have been working on the next version of ampy which will solve various problems with the current system. Based on a new modular architecture, it makes adding device support and features very simple using plugins. It also aims to support coding over WiFi for supported devices. This should eliminate the need to have a wired connection and improve reliability as well.
 [Here](https://github.com/curiouswala/ampy-2) is an alpha release please go ahead and play with it. Leave suggestions for a new name in the issue section. :)
