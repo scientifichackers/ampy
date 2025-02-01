@@ -59,7 +59,10 @@ class Files(object):
         # expects string data.
         command = """
             import sys
-            import ubinascii
+            try:
+                import ubinascii
+            except ImportError:
+                import binascii as ubinascii
             with open('{0}', 'rb') as infile:
                 while True:
                     result = infile.read({1})
@@ -76,7 +79,7 @@ class Files(object):
             # Check if this is an OSError #2, i.e. file doesn't exist and
             # rethrow it as something more descriptive.
             try:
-                message = ex.args[2].decode("utf-8")
+                message = str(ex)
                 if message.find("OSError") != -1 and message.find("2") != -1:
                     raise RuntimeError("No such file: {0}".format(filename))
                 else:
@@ -171,7 +174,7 @@ class Files(object):
         except PyboardError as ex:
             # Check if this is an OSError #2, i.e. directory doesn't exist and
             # rethrow it as something more descriptive.
-            message = ex.args[2].decode("utf-8")
+            message = str(ex)
             if message.find("OSError") != -1 and message.find("2") != 1:
                 raise RuntimeError("No such directory: {0}".format(directory))
             else:
@@ -180,6 +183,54 @@ class Files(object):
         # Parse the result list and return it.
         return ast.literal_eval(out.decode("utf-8"))
 
+    def lsi(self, directory="/"):
+        """List the contents of the specified directory (or root if none is
+        specified).  Returns a list of strings with the names of files in the
+        specified directory.  If long_format is True then a list of 2-tuples
+        with the name and size (in bytes) of the item is returned.  Note that
+        it appears the size of directories is not supported by MicroPython and
+        will always return 0 (i.e. no recursive size computation).
+        """
+
+        # Disabling for now, see https://github.com/adafruit/ampy/issues/55.
+        # # Make sure directory ends in a slash.
+        # if not directory.endswith("/"):
+        #     directory += "/"
+
+        # Make sure directory starts with slash, for consistency.
+        if not directory.startswith("/"):
+            directory = "/" + directory
+
+        command = """\
+                try:        
+                    import os
+                except ImportError:
+                    import uos as os
+
+                def listdir(directory):
+                    if directory == '/':                
+                        return sorted([(f[0], f[1]) for f in os.ilistdir(directory)])
+                    else:
+                        return sorted([(directory + '/' + f[0], f[1]) for f in os.ilistdir(directory)])
+
+                print(listdir('{0}'))
+                """.format(
+                    directory
+                )
+        self._pyboard.enter_raw_repl()
+        try:
+            out = self._pyboard.exec_(textwrap.dedent(command))
+        except PyboardError as ex:
+            # Check if this is an OSError #2, i.e. directory doesn't exist and
+            # rethrow it as something more descriptive.
+            message = str(ex)
+            if message.find("OSError") != -1 and message.find("2") != 1:
+                raise RuntimeError("No such directory: {0}".format(directory))
+            else:
+                raise ex
+        self._pyboard.exit_raw_repl()
+        # Parse the result list and return it.
+        return ast.literal_eval(out.decode("utf-8"))
     def mkdir(self, directory, exists_okay=False):
         """Create the specified directory.  Note this cannot create a recursive
         hierarchy of directories, instead each one should be created separately.
@@ -199,7 +250,7 @@ class Files(object):
             out = self._pyboard.exec_(textwrap.dedent(command))
         except PyboardError as ex:
             # Check if this is an OSError #17, i.e. directory already exists.
-            message = ex.args[2].decode("utf-8")
+            message = str(ex)
             if message.find("OSError") != -1 and message.find("17") != -1:
                 if not exists_okay:
                     raise DirectoryExistsError(
@@ -246,7 +297,7 @@ class Files(object):
         try:
             out = self._pyboard.exec_(textwrap.dedent(command))
         except PyboardError as ex:
-            message = ex.args[2].decode("utf-8")
+            message = str(ex)
             # Check if this is an OSError #2, i.e. file/directory doesn't exist
             # and rethrow it as something more descriptive.
             if message.find("OSError") != -1 and message.find("2") != 1:
@@ -293,7 +344,7 @@ class Files(object):
         try:
             out = self._pyboard.exec_(textwrap.dedent(command))
         except PyboardError as ex:
-            message = ex.args[2].decode("utf-8")
+            message = str(ex)
             # Check if this is an OSError #2, i.e. directory doesn't exist
             # and rethrow it as something more descriptive.
             if message.find("OSError") != -1 and message.find("2") != 1:
@@ -324,3 +375,25 @@ class Files(object):
                 self._pyboard.exec_raw_no_follow(infile.read())
         self._pyboard.exit_raw_repl()
         return out
+
+    def run_file(self, file, wait_output=True, stream_output=True):
+        """Run the provided script and return its output.  If wait_output is True
+        (default) then wait for the script to finish and then return its output,
+        otherwise just run the script and don't wait for any output.
+        If stream_output is True(default) then return None and print outputs to
+        stdout without buffering.
+        """
+        self._pyboard.enter_raw_repl()
+        out = None
+        if stream_output:
+            self._pyboard.execfileobject(file, stream_output=True)
+        elif wait_output:
+            # Run the file and wait for output to return.
+            out = self._pyboard.execfileobject(file)
+        else:
+            # Read the file and run it using lower level pyboard functions that
+            # won't wait for it to finish or return output.
+            self._pyboard.exec_raw_no_follow(file.read())
+        self._pyboard.exit_raw_repl()
+        return out
+

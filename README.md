@@ -1,6 +1,24 @@
-# ampy replacement
-We have been working on the next version of ampy which will solve various problems with the current system. Based on a new modular architecture, it makes adding device support and features very simple using plugins. It also aims to support coding over WiFi for supported devices. This should eliminate the need to have a wired connection and improve reliability as well.
-[Here](https://github.com/curiouswala/ampy-2) is an alpha release please go ahead and play with it. Leave suggestions for a new name in the issue section. :)
+## Interactive ampy
+
+This is a fork of ampy to add an interactive frontend to the program. It also means to add some extra
+functionality to make manipulation of files on the local and remote system more like working in a linux
+terminal. Little bug fixes will be added as necessary. This tool is focused on MicroPython compatibility
+right now and so no guarantees any of this will work with CircuitPython.
+
+As of now, all features of ampy are available to the new interactive client, plus the quality-of-life stuff to
+make file management between computer and device easier. The tool can drop you into the REPL of your device with
+tio, and everything's fully documented through an in-client help command. 
+
+Features:
+- Interactive bash-style client to manage a MicroPython device on the cli
+- Client implements a working directory on your MicroPython device's filesystem and manages the working directory on your local PC
+- Filesystem navigation relative to current working directory (on both PC and microcontroller filesystem)
+- Overwrite protection for file I/O operations. 
+- Client tracks what is a file and what is a directory and tells you which is which.
+- Remotely execute script files stored on your microcontroller as well as files stored locally on your PC
+- Client keeps track of previous commands - quickly re-enter long commands using partial implementation of bash bang syntax
+
+I am confident there are bugs to track down and features which need some finessing, but the basics are all there!
 
 ## ampy
 

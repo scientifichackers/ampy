@@ -28,8 +28,7 @@ import serial.serialutil
 
 import click
 import dotenv
-from progress_bar import PorgressBar
-from progress_bar import PorgressBarBath
+from progress_bar import ProgressBar
 
 # Load AMPY_PORT et al from .ampy file
 # Performed here because we need to beat click's decorators.
@@ -50,7 +49,7 @@ def windows_full_port_name(portname):
     # 9 are just referred to by COM1, COM2, etc. (wacky!)  See this post for
     # more info and where this code came from:
     # http://eli.thegreenplace.net/2009/07/31/listing-all-serial-ports-on-windows-with-python/
-    m = re.match("^COM(\d+)$", portname)
+    m = re.match(r"^COM(\d+)$", portname)
     if m and int(m.group(1)) < 10:
         return portname
     else:
@@ -253,12 +252,12 @@ def put(local, remote):
     # Otherwise it's a file and should simply be copied over.
     if os.path.isdir(local):
         # Create progress bar for each file
-        pb_bath =  PorgressBarBath('Overall progress')
+        pb_bath =  ProgressBar('Overall progress')
         for parent, child_dirs, child_files in os.walk(local, followlinks=True):
             for filename in child_files:
                 path = os.path.join(parent, filename)
                 size = os.stat(path).st_size
-                pb_bath.add_subjob(PorgressBar(name=path,total=size ))
+                pb_bath.add_subjob(ProgressBar(name=path,total=size ))
 
         # Directory copy, create the directory and walk all children to copy
         # over the files.
@@ -289,9 +288,9 @@ def put(local, remote):
         # Put the file on the board.
         with open(local, "rb") as infile:
             data = infile.read()
-            progress = PorgressBar(name=local, total=len(data))
+#            progress = ProgressBar()
             board_files = files.Files(_board)
-            board_files.put(remote, data, progress.on_progress_done)
+            board_files.put(remote, data, None)
     print('')
 
 @cli.command()

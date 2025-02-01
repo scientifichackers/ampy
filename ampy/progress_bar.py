@@ -1,7 +1,7 @@
 import math
 import time
 
-class PorgressBar(object):
+class ProgressBar(object):
     def __init__(self, name='', total=100, bar_width = 22, autorender=True):
         self.total = total
         self.progress = 0
@@ -42,11 +42,11 @@ class PorgressBar(object):
         else:
             print(self.render)
 
-class PorgressBarBath(object):
+class ProgressBarBath(object):
     def __init__(self, name, bar_width = 40):
         self.jobs = []
         self.name = name
-        self.progress = PorgressBar(name, 0, bar_width=bar_width, autorender=False )
+        self.progress = ProgressBar(name, 0, bar_width=bar_width, autorender=False )
         self.last_render_lines = 0
         self.bar_width = bar_width
     
@@ -54,7 +54,7 @@ class PorgressBarBath(object):
         return next( (x for x in self.jobs if x.name == name), None)
 
     def add_subjob(self, job):
-        if isinstance(job, PorgressBar):
+        if isinstance(job, ProgressBar):
             job.parent_bath_job = self
             job.autorender = False
             job.bar_width = self.bar_width
@@ -93,12 +93,12 @@ class PorgressBarBath(object):
 
 
 if __name__ == '__main__':
-    pb  = PorgressBar('reading stuff', 200, 60, True)
-    pb_1 = PorgressBar('writing', 100, 22, True)
-    pb_2 = PorgressBar('sleeping', 20, 22, True)
-    pb_3  = PorgressBar('reading again', 200, 60, True)
+    pb  = ProgressBar('reading stuff', 200, 60, True)
+    pb_1 = ProgressBar('writing', 100, 22, True)
+    pb_2 = ProgressBar('sleeping', 20, 22, True)
+    pb_3  = ProgressBar('reading again', 200, 60, True)
 
-    bath = PorgressBarBath('Overall')
+    bath = ProgressBarBath('Overall')
     bath.add_subjob(pb)
     bath.add_subjob(pb_1)
     bath.add_subjob(pb_2)

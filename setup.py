@@ -76,7 +76,7 @@ setup(
 
     entry_points={
         'console_scripts': [
-            'ampy=ampy.cli:cli',
+            'ampy=ampy.cli_interactive:cli_interactive',
         ],
     },
 )
