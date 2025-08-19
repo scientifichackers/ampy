@@ -59,13 +59,13 @@ class Files(object):
         # expects string data.
         command = """
             import sys
-            import ubinascii
+            import binascii
             with open('{0}', 'rb') as infile:
                 while True:
                     result = infile.read({1})
                     if result == b'':
                         break
-                    len = sys.stdout.write(ubinascii.hexlify(result))
+                    len = sys.stdout.write(binascii.hexlify(result))
         """.format(
             filename, BUFFER_SIZE
         )
