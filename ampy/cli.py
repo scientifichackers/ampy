@@ -42,6 +42,21 @@ import ampy.pyboard as pyboard
 _board = None
 
 
+class AmypGroup(click.Group):
+    """Custom Click group that converts RuntimeError / DirectoryExistsError into
+    clean error messages instead of raw Python tracebacks."""
+
+    def invoke(self, ctx):
+        try:
+            return super().invoke(ctx)
+        except files.DirectoryExistsError as e:
+            click.echo("Error: {}".format(e), err=True)
+            raise SystemExit(1)
+        except RuntimeError as e:
+            click.echo("Error: {}".format(e), err=True)
+            raise SystemExit(1)
+
+
 def windows_full_port_name(portname):
     # Helper function to generate proper Windows COM port paths.  Apparently
     # Windows requires COM ports above 9 to have a special path, where ports below
@@ -55,7 +70,7 @@ def windows_full_port_name(portname):
         return "\\\\.\\{0}".format(portname)
 
 
-@click.group()
+@click.group(cls=AmypGroup)
 @click.option(
     "--port",
     "-p",
@@ -357,6 +372,7 @@ def run(local_file, no_output):
         click.echo(
             "Failed to find or read input file: {0}".format(local_file), err=True
         )
+        raise SystemExit(1)
 
 
 @cli.command()
@@ -417,10 +433,9 @@ def reset(mode):
     """
     )
     r = _board.eval("on_next_reset({})".format(repr(mode)))
-    print("here we are", repr(r))
     if r:
-        click.echo(r, err=True)
-        return
+        click.echo(r.decode("utf-8"), err=True)
+        raise SystemExit(1)
 
     try:
         _board.exec_raw_no_follow("reset()")

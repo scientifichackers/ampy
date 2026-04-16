@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import ast
+import re
 import textwrap
 import binascii
 
@@ -153,8 +154,11 @@ class Files(object):
             command += """
                 r = []
                 for f in listdir('{0}'):
-                    size = os.stat(f)[6]                    
-                    r.append('{{0}} - {{1}} bytes'.format(f, size))
+                    st = os.stat(f)
+                    if st[0] & 0x4000:
+                        r.append('{{0}} - <dir>'.format(f))
+                    else:
+                        r.append('{{0}} - {{1}} bytes'.format(f, st[6]))
                 print(r)
             """.format(
                 directory
@@ -243,15 +247,20 @@ class Files(object):
             out = self._pyboard.exec_(textwrap.dedent(command))
         except PyboardError as ex:
             message = ex.args[2].decode("utf-8")
-            # Check if this is an OSError #2, i.e. file/directory doesn't exist
-            # and rethrow it as something more descriptive.
-            if message.find("OSError") != -1 and message.find("2") != 1:
-                raise RuntimeError("No such file/directory: {0}".format(filename))
-            # Check for OSError #13, the directory isn't empty.
-            if message.find("OSError") != -1 and message.find("13") != 1:
-                raise RuntimeError("Directory is not empty: {0}".format(filename))
-            else:
-                raise ex
+            if "OSError" in message:
+                # Extract errno number — MicroPython formats as either
+                # "OSError: 2" or "OSError: [Errno 2] ENOENT"
+                errno_match = re.search(r"OSError:.*?(\d+)", message)
+                errno_val = int(errno_match.group(1)) if errno_match else None
+                if errno_val == 2:  # ENOENT
+                    raise RuntimeError("No such file/directory: {0}".format(filename))
+                elif errno_val == 21:  # EISDIR
+                    raise RuntimeError(
+                        "Is a directory (use rmdir to remove): {0}".format(filename)
+                    )
+                elif errno_val == 39:  # ENOTEMPTY
+                    raise RuntimeError("Directory is not empty: {0}".format(filename))
+            raise ex
         self._pyboard.exit_raw_repl()
 
     def rmdir(self, directory, missing_okay=False):
