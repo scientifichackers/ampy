@@ -173,9 +173,14 @@ class Pyboard:
         return data
 
     def enter_raw_repl(self):
-        # Brief delay before sending RAW MODE char if requests
+        # Brief delay before sending RAW MODE char if requested
         if _rawdelay > 0:
             time.sleep(_rawdelay)
+            # Drain any pending serial data to wake boards (e.g. Feather52)
+            # whose console needs activity before it becomes responsive.
+            n = self.serial.inWaiting()
+            if n > 0:
+                self.serial.read(n)
 
         # ctrl-C twice: interrupt any running program
         self.serial.write(b'\r\x03')
