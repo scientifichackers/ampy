@@ -20,11 +20,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import ast
+import logging
 import re
 import textwrap
 import binascii
 
 from ampy.pyboard import PyboardError
+
+logger = logging.getLogger(__name__)
 
 
 BUFFER_SIZE = 32  # Amount of data to read or write to the serial port at a time.
@@ -58,6 +61,7 @@ class Files(object):
         # raw bytes.  Be careful not to overload the UART buffer so only write
         # a few bytes at a time, and don't use print since it adds newlines and
         # expects string data.
+        logger.debug("get %s", filename)
         command = """
             import sys
             try:
@@ -99,6 +103,7 @@ class Files(object):
         will always return 0 (i.e. no recursive size computation).
         """
 
+        logger.debug("ls %s (long_format=%s, recursive=%s)", directory, long_format, recursive)
         # Disabling for now, see https://github.com/adafruit/ampy/issues/55.
         # # Make sure directory ends in a slash.
         # if not directory.endswith("/"):
@@ -191,6 +196,7 @@ class Files(object):
         """Create the specified directory.  Note this cannot create a recursive
         hierarchy of directories, instead each one should be created separately.
         """
+        logger.debug("mkdir %s", directory)
         # Execute os.mkdir command on the board.
         command = """
             try:
@@ -222,6 +228,7 @@ class Files(object):
         progress_callback, if provided, is called with (bytes_written, total_bytes)
         after each chunk is written.
         """
+        logger.debug("put %s (%d bytes)", filename, len(data))
         # Open the file for writing on the board and write chunks of data.
         self._pyboard.enter_raw_repl()
         self._pyboard.exec_("f = open('{0}', 'wb')".format(filename))
@@ -241,6 +248,7 @@ class Files(object):
 
     def rm(self, filename):
         """Remove the specified file or directory."""
+        logger.debug("rm %s", filename)
         command = """
             try:
                 import os
@@ -273,6 +281,7 @@ class Files(object):
 
     def rmdir(self, directory, missing_okay=False):
         """Forcefully remove the specified directory and all its children."""
+        logger.debug("rmdir %s", directory)
         # Build a script to walk an entire directory structure and delete every
         # file and subfolder.  This is tricky because MicroPython has no os.walk
         # or similar function to walk folders, so this code does it manually
@@ -323,6 +332,7 @@ class Files(object):
         If stream_output is True(default) then return None and print outputs to
         stdout without buffering.
         """
+        logger.debug("run %s (wait_output=%s, stream_output=%s)", filename, wait_output, stream_output)
         self._pyboard.enter_raw_repl()
         out = None
         if stream_output:
