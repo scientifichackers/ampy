@@ -44,8 +44,11 @@ _board = None
 
 
 class AmypGroup(click.Group):
-    """Custom Click group that converts RuntimeError / DirectoryExistsError into
-    clean error messages instead of raw Python tracebacks."""
+    """Custom Click group that:
+    - Converts RuntimeError / DirectoryExistsError into clean error messages
+    - Ensures the serial port is always closed on exit, regardless of how the
+      CLI was invoked (console_scripts entry point or python -m ampy)
+    """
 
     def invoke(self, ctx):
         try:
@@ -56,6 +59,12 @@ class AmypGroup(click.Group):
         except RuntimeError as e:
             click.echo("Error: {}".format(e), err=True)
             raise SystemExit(1)
+        finally:
+            if _board is not None:
+                try:
+                    _board.close()
+                except Exception:
+                    pass
 
 
 def windows_full_port_name(portname):
@@ -99,7 +108,7 @@ def windows_full_port_name(portname):
     help="Delay in seconds before entering RAW MODE (default 0). Can optionally specify with AMPY_DELAY environment variable.",
     metavar="DELAY",
 )
-@click.version_option()
+@click.version_option(package_name="adafruit-ampy")
 def cli(port, baud, delay):
     """ampy - Adafruit MicroPython Tool
 
@@ -246,6 +255,27 @@ def ls(directory, long_format, recursive):
 
 
 @cli.command()
+@click.argument("remote_src")
+@click.argument("remote_dest")
+def mv(remote_src, remote_dest):
+    """Rename/move a file or directory on the board.
+
+    Mv will rename or move a file or directory on the board's filesystem.
+    Both arguments are paths on the board.
+
+    For example to rename main.py to backup.py on the board run:
+
+      ampy --port /board/serial/port mv main.py backup.py
+
+    Or to move a file into a subdirectory:
+
+      ampy --port /board/serial/port mv main.py /lib/main.py
+    """
+    board_files = files.Files(_board)
+    board_files.mv(remote_src, remote_dest)
+
+
+@cli.command()
 @click.argument("local", type=click.Path(exists=True))
 @click.argument("remote", required=False)
 @click.option(
@@ -290,11 +320,25 @@ def put(local, remote, no_progress):
         remote = os.path.basename(os.path.abspath(local))
     # Check if path is a folder and do recursive copy of everything inside it.
     # Otherwise it's a file and should simply be copied over.
+    # Directories and files to skip during recursive put.
+    _HIDDEN_EXCLUDES = {
+        ".git", ".hg", ".svn",           # VCS
+        "__pycache__", ".mypy_cache",    # Python caches
+        ".DS_Store", "Thumbs.db",        # OS metadata
+        "node_modules",                  # JS
+        ".venv", "venv", ".env",         # Virtual envs
+    }
+
     if os.path.isdir(local):
         # Directory copy, create the directory and walk all children to copy
         # over the files.
         board_files = files.Files(_board)
         for parent, child_dirs, child_files in os.walk(local, followlinks=True):
+            # Prune excluded directories in-place so os.walk won't descend into them.
+            child_dirs[:] = [
+                d for d in child_dirs
+                if d not in _HIDDEN_EXCLUDES and not d.startswith(".")
+            ]
             # Create board filesystem absolute path to parent directory.
             remote_parent = posixpath.normpath(
                 posixpath.join(remote, os.path.relpath(parent, local))
@@ -305,8 +349,11 @@ def put(local, remote, no_progress):
             except files.DirectoryExistsError:
                 # Ignore errors for directories that already exist.
                 pass
-            # Loop through all the files and put them on the board too.
+            # Loop through all the files and put them on the board too,
+            # skipping hidden and OS-metadata files.
             for filename in child_files:
+                if filename in _HIDDEN_EXCLUDES or filename.startswith("."):
+                    continue
                 local_path = os.path.join(parent, filename)
                 remote_filename = posixpath.join(remote_parent, filename)
                 with open(local_path, "rb") as infile:

@@ -33,7 +33,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    version="1.1.0",
+    version="1.2.0",
     name='adafruit-ampy',
 
     # use_scm_version=True,

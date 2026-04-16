@@ -57,6 +57,7 @@ You should see usage information displayed like below:
       get    Retrieve a file from the board.
       ls     List contents of a directory on the board.
       mkdir  Create a directory on the board.
+      mv     Rename/move a file or directory on the board.
       put    Put a file or folder and its contents on the board.
       rm     Remove a file from the board.
       rmdir  Forcefully remove a folder and all its children from the board.

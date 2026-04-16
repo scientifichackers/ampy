@@ -30,9 +30,7 @@ from ampy.pyboard import PyboardError
 logger = logging.getLogger(__name__)
 
 
-BUFFER_SIZE = 32  # Amount of data to read or write to the serial port at a time.
-# This is kept small because small chips and USB to serial
-# bridges usually have very small buffers.
+BUFFER_SIZE = 256  # Amount of data to read or write to the serial port at a time.
 
 
 class DirectoryExistsError(Exception):
@@ -244,6 +242,31 @@ class Files(object):
             if progress_callback:
                 progress_callback(min(i + BUFFER_SIZE, size), size)
         self._pyboard.exec_("f.close()")
+        self._pyboard.exit_raw_repl()
+
+    def mv(self, src, dest):
+        """Rename/move a file or directory on the board."""
+        logger.debug("mv %s -> %s", src, dest)
+        command = """
+            try:
+                import os
+            except ImportError:
+                import uos as os
+            os.rename('{0}', '{1}')
+        """.format(
+            src, dest
+        )
+        self._pyboard.enter_raw_repl()
+        try:
+            out = self._pyboard.exec_(textwrap.dedent(command))
+        except PyboardError as ex:
+            message = ex.args[2].decode("utf-8")
+            if "OSError" in message:
+                errno_match = re.search(r"OSError:.*?(\d+)", message)
+                errno_val = int(errno_match.group(1)) if errno_match else None
+                if errno_val == 2:  # ENOENT
+                    raise RuntimeError("No such file/directory: {0}".format(src))
+            raise ex
         self._pyboard.exit_raw_repl()
 
     def rm(self, filename):

@@ -6,6 +6,16 @@ This document tracks what has been done, decisions made, and what remains for th
 
 ## Completed
 
+### Phase 5 — New Features & Improvements (v1.2.0)
+
+| Change | Details |
+|--------|---------|
+| `mv` command | Rename/move files and directories on the board using `os.rename()`. Tested: rename, move into subdir, rename dir, error on missing src. |
+| Hidden file filtering in `put` | Recursive `put` now skips `.git`, `.hg`, `.svn`, `__pycache__`, `.mypy_cache`, `.DS_Store`, `Thumbs.db`, `node_modules`, `.venv`/`venv`, `.env`, and any file/dir starting with `.` |
+| `BUFFER_SIZE` 32 → 256 | Benchmarked on ESP32: 32=8.9s, 128=3.0s, 256=2.6s, 512=2.5s for a 12KB file. 256 gives 3.4× speedup with no instability. |
+| Port always released on exit | Moved `_board.close()` into `AmypGroup.invoke`'s `finally` block — fires for console_scripts, `python -m ampy`, error paths, and normal exit. Previously only ran in `if __name__ == "__main__"`. |
+| Version bump to 1.2.0 | `setup.py` version updated; `@click.version_option(package_name="adafruit-ampy")` fixed so `--version` works correctly. |
+
 ### Phase 1 — Bug Fixes
 
 | Fix | Files | Details |
@@ -85,29 +95,19 @@ This document tracks what has been done, decisions made, and what remains for th
   - Gate on Python ≥ 3.9 (`ast.unparse` requirement) or use `tokenize` for broader compat
   - Rename to `put --minify` or `put --strip-docstrings` to be accurate about what's removed
 
-- **`mv` / rename command** (Issue #61, marked Good First Issue)
-  - No rename command exists; users must `get` + `put` + `rm`
-  - MicroPython has `os.rename()` — straightforward to add as a new `mv` CLI command
+- ~~**`mv` / rename command**~~ ✓ Done in v1.2.0
 
 - **JSON output for `ls`** (Issue #59)
   - Add `--json` flag to `ls` for machine-readable output
   - Useful for scripting and GUI tools built on top of ampy
 
-- **Hidden file filtering in `put`** (Issue #113)
-  - Recursive `put` currently copies `.git`, `__pycache__`, `.DS_Store` etc.
-  - Add default exclusion list; allow override with `--include-hidden`
+- ~~**Hidden file filtering in `put`**~~ ✓ Done in v1.2.0
 
-- **Increase `BUFFER_SIZE`** (`files.py`)
-  - Currently 32 bytes per write — extremely conservative
-  - Modern boards and USB-serial bridges handle 256–512 bytes safely
-  - Would significantly speed up large file uploads
+- ~~**Increase `BUFFER_SIZE`**~~ ✓ Done in v1.2.0 (32 → 256, 3.4× faster)
 
 ### Low Priority
 
-- **`python -m ampy` console_scripts alignment** (Issue #112 related)
-  - The `if __name__ == "__main__"` block in `cli.py` closes the board connection in `finally`
-  - The console_scripts entry point does not — if Click exits abnormally the port may stay open
-  - Fix: move close logic into `AmypGroup.invoke`'s `finally`
+- ~~**Port not released after exit**~~ ✓ Done in v1.2.0 (`AmypGroup.invoke` finally block)
 
 - **Windows COM port hanging** (Issues #71, #72)
   - Commands hang indefinitely on Windows 10 for some boards
