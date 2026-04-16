@@ -60,7 +60,10 @@ class Files(object):
         # expects string data.
         command = """
             import sys
-            import ubinascii
+            try:
+                import ubinascii
+            except ImportError:
+                import binascii as ubinascii
             with open('{0}', 'rb') as infile:
                 while True:
                     result = infile.read({1})
@@ -213,8 +216,11 @@ class Files(object):
                 raise ex
         self._pyboard.exit_raw_repl()
 
-    def put(self, filename, data):
+    def put(self, filename, data, progress_callback=None):
         """Create or update the specified file with the provided data.
+
+        progress_callback, if provided, is called with (bytes_written, total_bytes)
+        after each chunk is written.
         """
         # Open the file for writing on the board and write chunks of data.
         self._pyboard.enter_raw_repl()
@@ -228,6 +234,8 @@ class Files(object):
             if not chunk.startswith("b"):
                 chunk = "b" + chunk
             self._pyboard.exec_("f.write({0})".format(chunk))
+            if progress_callback:
+                progress_callback(min(i + BUFFER_SIZE, size), size)
         self._pyboard.exec_("f.close()")
         self._pyboard.exit_raw_repl()
 
