@@ -48,10 +48,35 @@ except AttributeError:
     # Python2 doesn't have buffer attr
     stdout = sys.stdout
 
+utf8Char = b""
+counts = 3
 def stdout_write_bytes(b):
-    b = b.replace(b"\x04", b"")
-    stdout.write(b)
-    stdout.flush()
+    global utf8Char, counts
+
+    for i in b:
+        curr = b'' + b    
+        if curr==b'\x04':                 # end of output
+            return;
+        elif curr <= b'\x7f':             # 1-byte UTF-8 char
+            utf8Char = curr
+            counts = 0
+        elif b'\xC0' <= curr <= b'\xDF':  # 2-bytes UTF-8 char
+            utf8Char = curr
+            counts = 1
+        elif b'\xE0' <= curr <= b'\xEF':  # 3-bytes UTF-8 char
+            utf8Char = curr
+            counts = 2
+        elif b'\xF0' <= curr <= b'\xF7':  # 4-bytes UTF-8 char
+            utf8Char = curr
+            counts = 3
+        elif b'\x80' <= curr <= b'\xBF':  # 1 byte in a UTF-8 char
+            utf8Char = utf8Char + curr
+            counts = counts - 1
+        
+        if counts == 0:                   # 1 UTF-8 char readed
+            print(utf8Char.decode('UTF-8'), end="")
+            counts = 3                    # reset count
+            utf8Char=b''
 
 class PyboardError(BaseException):
     pass
